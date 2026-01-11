@@ -1,0 +1,18 @@
+[Unit]
+Description=AI-as-Me Personal AI Agent
+After=network.target
+
+[Service]
+Type=simple
+User=%USER%
+WorkingDirectory=%WORKING_DIR%
+Environment="PATH=%PATH%"
+EnvironmentFile=%WORKING_DIR%/.env
+ExecStart=%PYTHON% -m ai_as_me.cli.main run
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
