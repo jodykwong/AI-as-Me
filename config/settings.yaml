@@ -1,0 +1,27 @@
+# AI-as-Me Configuration
+# Story 12.1: 统一配置文件
+
+database:
+  path: ${AI_AS_ME_DB:data/tasks.db}
+  pool_size: 5
+
+rag:
+  persist_dir: ${AI_AS_ME_RAG_DIR:~/.ai-as-me/rag}
+  model: all-MiniLM-L6-v2
+  cache_size: 128
+
+api:
+  host: 0.0.0.0
+  port: 8000
+  cors_origins: ["*"]
+  max_subscribers: 100
+
+tools:
+  config_path: ${AI_AS_ME_TOOLS_CONFIG:config/agents.yaml}
+
+feedback:
+  db_path: ${AI_AS_ME_FEEDBACK_DB:~/.ai-as-me/feedback.db}
+
+logging:
+  level: ${LOG_LEVEL:INFO}
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

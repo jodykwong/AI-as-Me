@@ -28,8 +28,24 @@ bash scripts/setup.sh
 ### 手动安装
 
 ```bash
+# 安装依赖
 pip install -e .
+
+# 配置环境变量
+cp .env.example .env
+# 编辑 .env 文件
+
+# 启动 Web 仪表板
+python -m ai_as_me.cli_main serve
 ```
+
+### 访问
+
+- **Web Dashboard**: http://localhost:8000
+- **API Docs**: http://localhost:8000/docs
+- **Health Check**: http://localhost:8000/api/health
+
+详细部署说明见 [docs/deployment.md](docs/deployment.md)
 
 ### 配置
 
@@ -39,6 +55,8 @@ pip install -e .
 DEEPSEEK_API_KEY=your_api_key_here
 DEEPSEEK_API_BASE=https://api.deepseek.com/v1
 ```
+
+完整环境变量说明见 [docs/environment-variables.md](docs/environment-variables.md)
 
 ### 使用
 

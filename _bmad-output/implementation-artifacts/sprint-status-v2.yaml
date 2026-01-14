@@ -1,0 +1,141 @@
+# generated: 2026-01-13T06:52:18+08:00
+# project: AI-as-Me
+# project_key: ai-as-me-v2
+# tracking_system: file-system
+# story_location: _bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2026-01-13T06:52:18+08:00
+project: AI-as-Me
+project_key: ai-as-me-v2
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+
+development_status:
+  # Epic 1: 系统基础设施与安装
+  epic-1: done
+  1-1-system-package-installation: done
+  1-2-environment-dependency-check: done
+  1-3-initialization-config-directory-structure: done
+  1-4-agent-cli-tool-availability-detection: done
+  epic-1-retrospective: skipped
+
+  # Epic 2: Agent CLI 编排核心
+  epic-2: done
+  2-1-task-creation-management: done
+  2-2-agent-cli-invocation-mechanism: done
+  2-3-task-execution-status-tracking: done
+  2-4-error-handling-recovery-mechanism: done
+  epic-2-retrospective: skipped
+
+  # Epic 3: Soul 注入与个性化
+  epic-3: done
+  3-1-soul-file-management: done
+  3-2-prompt-template-construction: done
+  3-3-soul-injection-external-tools: done
+  3-4-security-permission-management: done
+  epic-3-retrospective: skipped
+
+  # Epic 4: 养蛊自进化循环
+  epic-4: done
+  4-1-execution-result-collection: done
+  4-2-reflection-pattern-extraction: done
+  4-3-rule-automatic-update: done
+  4-4-learning-effect-verification: done
+  epic-4-retrospective: skipped
+  
+  # ═══════════════════════════════════════════════════════════
+  # v2.1 Sprint - P1 Features
+  # Sprint Start: 2026-01-14
+  # Sprint Duration: 7 days
+  # ═══════════════════════════════════════════════════════════
+  
+  # Epic 5: 多工具智能选择 (FR-05)
+  epic-5: done
+  5-1-task-type-recognition: done
+  5-2-tool-capability-registry: done
+  5-3-history-success-tracking: done
+  5-4-smart-tool-selection-algorithm: done
+  5-5-manual-tool-override: done
+  epic-5-retrospective: done
+
+  # Epic 6: Web 仪表板 (FR-06)
+  epic-6: done
+  6-1-web-service-startup: done
+  6-2-task-kanban-view: done
+  6-3-web-task-creation: done
+  6-4-realtime-status-update: done
+  6-5-system-health-monitoring: done
+  epic-6-retrospective: done
+
+  # Epic 7: Agentic RAG 检索 (FR-07)
+  epic-7: done
+  7-1-vector-store-initialization: done
+  7-2-task-experience-storage: done
+  7-3-similar-experience-retrieval: done
+  7-4-context-injection-integration: done
+  7-5-user-feedback-learning: done
+  epic-7-retrospective: done
+  
+  # v2.1 Sprint Retrospective
+  v2.1-sprint-retrospective: done
+
+  # ═══════════════════════════════════════════════════════════
+  # v2.2 Sprint - 技术债务 + 性能优化 + 功能增强
+  # Sprint Start: TBD
+  # Sprint Duration: 7 days
+  # ═══════════════════════════════════════════════════════════
+  
+  # Epic 8: 技术债务清理
+  epic-8: done
+  8-1-sse-frontend-reconnect: done
+  8-2-feedback-weight-persistence: done
+  8-3-keyword-preprocessing: done
+  8-4-type-annotations: done
+  epic-8-retrospective: done
+
+  # Epic 9: 性能优化
+  epic-9: done
+  9-1-database-connection-pool: done
+  9-2-rag-retrieval-cache: done
+  9-3-embedding-model-preload: done
+  epic-9-retrospective: done
+
+  # Epic 10: 功能增强
+  epic-10: done
+  10-1-gemini-cli-support: done
+  10-2-qwen-code-support: done
+  10-3-web-ui-beautification: done
+  10-4-bmad-skill-extension-base: done
+  epic-10-retrospective: done
+  
+  # v2.2 Sprint Retrospective
+  v2.2-sprint-retrospective: done

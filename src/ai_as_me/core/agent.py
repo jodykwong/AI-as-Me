@@ -4,14 +4,17 @@ import signal
 import sys
 from pathlib import Path
 from typing import Optional
+from datetime import datetime
 
 
 class Agent:
     """Main agent loop."""
     
     def __init__(self, kanban_dir: Path, llm_client=None, soul_context: Optional[str] = None, 
-                 skip_clarification: bool = True, tracker=None, poll_interval: int = 5):
+                 skip_clarification: bool = True, tracker=None, poll_interval: int = 5,
+                 reflection_hour: int = 3):
         self.kanban_dir = kanban_dir
+        self.inbox_dir = kanban_dir / "inbox"
         self.todo_dir = kanban_dir / "todo"
         self.doing_dir = kanban_dir / "doing"
         self.done_dir = kanban_dir / "done"
@@ -19,6 +22,8 @@ class Agent:
         self.running = False
         self.skip_clarification = skip_clarification
         self.tracker = tracker
+        self.reflection_hour = reflection_hour
+        self._last_reflection_date = None
         
         # LLM execution
         self.llm_client = llm_client
@@ -42,6 +47,63 @@ class Agent:
         print(f"\n🛑 Received signal {signum}, shutting down gracefully...")
         self.running = False
     
+    def _process_inbox(self):
+        """Process tasks in inbox: analyze and move to todo."""
+        inbox_tasks = list(self.inbox_dir.glob("*.md")) if self.inbox_dir.exists() else []
+        
+        for task_path in inbox_tasks:
+            print(f"📥 New task in inbox: {task_path.name}")
+            
+            # Check for approval requirement
+            content = task_path.read_text()
+            if "[需要审批]" in content or "[NEEDS_APPROVAL]" in content:
+                approval_file = self.todo_dir / f"{task_path.stem}.approved"
+                if not approval_file.exists():
+                    print(f"  ⏸️  Requires approval, moving to todo (waiting)")
+                    self._move_task(task_path, self.todo_dir)
+                    continue
+            
+            # Move to todo for execution
+            self._move_task(task_path, self.todo_dir)
+            print(f"  → Moved to todo")
+
+    def _should_reflect(self) -> bool:
+        """Check if it's time for scheduled reflection."""
+        now = datetime.now()
+        today = now.date()
+        
+        # Only reflect once per day at the specified hour
+        if self._last_reflection_date == today:
+            return False
+        
+        return now.hour == self.reflection_hour
+
+    def _run_reflection(self, rules_file: Path):
+        """Run scheduled reflection on completed tasks."""
+        from ai_as_me.reflect.extractor import ReflectionEngine
+        
+        print(f"🌙 Running scheduled reflection...")
+        
+        try:
+            engine = ReflectionEngine(self.llm_client, self.done_dir, rules_file)
+            analyses = engine.analyze_tasks(last_n=10)
+            
+            if not analyses:
+                print("  No completed tasks to analyze")
+                return
+            
+            rules = engine.extract_rules(analyses)
+            
+            for rule in rules:
+                engine.add_rule(rule)
+                print(f"  📝 New rule: [{rule['category']}] {rule['content']}")
+            
+            self._last_reflection_date = datetime.now().date()
+            print(f"  ✓ Reflection complete, {len(rules)} rules extracted")
+            
+        except Exception as e:
+            print(f"  ❌ Reflection error: {e}")
+
     def _move_task(self, task_path: Path, target_dir: Path):
         """Move task to target directory."""
         target_path = target_dir / task_path.name
@@ -113,7 +175,7 @@ class Agent:
             })
         
         print("🚀 AI-as-Me Agent starting...")
-        print(f"📂 Watching: {self.todo_dir}")
+        print(f"📂 Watching: {self.inbox_dir} → {self.todo_dir}")
         print(f"⏱️  Poll interval: {self.poll_interval}s")
         
         if self.executor:
@@ -133,14 +195,32 @@ class Agent:
                 if self.tracker:
                     self.tracker.rotate_if_needed()
                 
-                # Check for tasks in todo directory
+                # Step 1: Process inbox → todo
+                self._process_inbox()
+                
+                # Step 2: Check for tasks in todo directory
                 tasks = list(self.todo_dir.glob("*.md")) if self.todo_dir.exists() else []
                 
-                if tasks:
-                    print(f"📋 Found {len(tasks)} task(s) in queue")
+                # Filter out tasks waiting for approval
+                executable_tasks = []
+                for t in tasks:
+                    content = t.read_text()
+                    if "[需要审批]" in content or "[NEEDS_APPROVAL]" in content:
+                        approval_file = self.todo_dir / f"{t.stem}.approved"
+                        if not approval_file.exists():
+                            continue
+                    executable_tasks.append(t)
+                
+                if executable_tasks:
+                    print(f"📋 Found {len(executable_tasks)} task(s) ready to execute")
                     
                     # Process first task
-                    self._process_task(tasks[0])
+                    self._process_task(executable_tasks[0])
+                elif self._should_reflect() and self.llm_client:
+                    # Idle time reflection
+                    rules_file = self.kanban_dir.parent / "soul" / "rules.md"
+                    if rules_file.exists():
+                        self._run_reflection(rules_file)
                 else:
                     print("💤 No tasks in queue, waiting...")
                 
