@@ -18,7 +18,7 @@ class Inspiration:
     maturity: float = 0.0
     status: str = "incubating"  # incubating|mature|converted|archived
     mentions: int = 0
-    id: str = field(default_factory=lambda: f"insp_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:4]}")
+    id: str = field(default_factory=lambda: f"insp_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}")
     created_at: datetime = field(default_factory=datetime.now)
     updated_at: datetime = field(default_factory=datetime.now)
     converted_to: Optional[str] = None

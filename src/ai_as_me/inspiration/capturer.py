@@ -1,24 +1,24 @@
 """Inspiration Capturer - 灵感捕获器."""
 import re
-from typing import Optional
+from typing import Optional, List, Tuple, Pattern
 from .models import Inspiration
 
 
 class InspirationCapturer:
     """从文本和任务中捕获灵感."""
     
-    TRIGGER_PATTERNS = [
-        (r"以后(可以|应该|要)(.+)", "future_action"),
-        (r"(想法|灵感|idea)[：:]\s*(.+)", "explicit_idea"),
-        (r"TODO[：:]\s*(.+)", "todo"),
-        (r"或许(可以|应该)(.+)", "suggestion"),
-        (r"如果能(.+)就好了", "wish"),
+    TRIGGER_PATTERNS: List[Tuple[Pattern, str]] = [
+        (re.compile(r"以后(可以|应该|要)(.+)"), "future_action"),
+        (re.compile(r"(想法|灵感|idea)[：:]\s*(.+)"), "explicit_idea"),
+        (re.compile(r"TODO[：:]\s*(.+)"), "todo"),
+        (re.compile(r"或许(可以|应该)(.+)"), "suggestion"),
+        (re.compile(r"如果能(.+)就好了"), "wish"),
     ]
     
     def capture_from_text(self, text: str, source: str = "conversation", source_id: str = None) -> Optional[Inspiration]:
         """从文本中捕获灵感."""
         for pattern, tag in self.TRIGGER_PATTERNS:
-            match = re.search(pattern, text)
+            match = pattern.search(text)
             if match:
                 # 提取灵感内容
                 content = match.group(0)

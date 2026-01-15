@@ -1,5 +1,6 @@
 """Inspiration Pool - 灵感池管理."""
 import json
+import fcntl
 from pathlib import Path
 from typing import List, Optional
 from datetime import datetime
@@ -14,11 +15,16 @@ class InspirationPool:
         self.pool_file = self.pool_dir / "pool.jsonl"
         self.index_file = self.pool_dir / "index.json"
         self.pool_dir.mkdir(parents=True, exist_ok=True)
+        self._cache: List[Inspiration] = []
+        self._cache_valid = False
         
     def add(self, inspiration: Inspiration) -> str:
         """添加灵感，返回 ID."""
         with open(self.pool_file, "a", encoding="utf-8") as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
             f.write(inspiration.to_json() + "\n")
+            fcntl.flock(f, fcntl.LOCK_UN)
+        self._cache_valid = False
         self._update_index()
         return inspiration.id
     
@@ -60,7 +66,10 @@ class InspirationPool:
         return self.update(id, {"status": "archived"})
     
     def _load_all(self) -> List[Inspiration]:
-        """加载所有灵感."""
+        """加载所有灵感（带缓存）."""
+        if self._cache_valid:
+            return self._cache
+            
         if not self.pool_file.exists():
             return []
         
@@ -68,13 +77,20 @@ class InspirationPool:
         for line in self.pool_file.read_text(encoding="utf-8").splitlines():
             if line.strip():
                 inspirations.append(Inspiration.from_dict(json.loads(line)))
+        
+        self._cache = inspirations
+        self._cache_valid = True
         return inspirations
     
     def _save_all(self, inspirations: List[Inspiration]):
-        """保存所有灵感."""
+        """保存所有灵感（带文件锁）."""
         with open(self.pool_file, "w", encoding="utf-8") as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
             for insp in inspirations:
                 f.write(insp.to_json() + "\n")
+            fcntl.flock(f, fcntl.LOCK_UN)
+        self._cache = inspirations
+        self._cache_valid = True
     
     def _update_index(self):
         """更新索引."""

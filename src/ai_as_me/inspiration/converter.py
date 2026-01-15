@@ -34,7 +34,10 @@ class InspirationConverter:
 ---
 *由灵感池自动转化于 {datetime.now().isoformat()}*
 """
-        rule_path.write_text(rule_content, encoding="utf-8")
+        try:
+            rule_path.write_text(rule_content, encoding="utf-8")
+        except IOError as e:
+            raise RuntimeError(f"写入规则文件失败: {e}")
         
         # 更新灵感状态
         self.pool.update(inspiration.id, {

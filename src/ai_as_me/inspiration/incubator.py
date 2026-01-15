@@ -16,11 +16,11 @@ class InspirationIncubator:
         now = datetime.now()
         
         # 时间因素 (最大 0.4)
-        age_days = (now - inspiration.created_at).days
+        age_days = max(0, (now - inspiration.created_at).days)
         time_score = min(age_days / 7, 1.0) * 0.4
         
         # 提及因素 (最大 0.3)
-        mention_score = min(inspiration.mentions / 3, 1.0) * 0.3
+        mention_score = min(max(0, inspiration.mentions) / 3, 1.0) * 0.3
         
         # 优先级因素 (最大 0.3)
         priority_map = {"high": 1.0, "medium": 0.5, "low": 0.2}

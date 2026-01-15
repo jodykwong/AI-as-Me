@@ -1,6 +1,6 @@
 """Rule Versioning - 规则版本管理."""
 import json
-import shutil
+import hashlib
 from pathlib import Path
 from datetime import datetime
 from typing import List, Optional
@@ -47,7 +47,7 @@ class RuleVersionManager:
             version=next_version,
             timestamp=datetime.now().isoformat(),
             reason=reason,
-            checksum=str(hash(content))[:8]
+            checksum=hashlib.md5(content.encode()).hexdigest()[:8]
         ))
         self._save_history(rule_name, history)
         
@@ -66,14 +66,17 @@ class RuleVersionManager:
     
     def diff(self, rule_name: str, v1: int, v2: int) -> dict:
         """对比两个版本."""
+        import difflib
+        
         content1 = self.get_version(rule_name, v1) or ""
         content2 = self.get_version(rule_name, v2) or ""
         
-        lines1 = content1.splitlines()
-        lines2 = content2.splitlines()
+        lines1 = content1.splitlines(keepends=True)
+        lines2 = content2.splitlines(keepends=True)
         
-        added = [l for l in lines2 if l not in lines1]
-        removed = [l for l in lines1 if l not in lines2]
+        diff_lines = list(difflib.unified_diff(lines1, lines2, f"v{v1}", f"v{v2}"))
+        added = [l[1:].rstrip() for l in diff_lines if l.startswith('+') and not l.startswith('+++')]
+        removed = [l[1:].rstrip() for l in diff_lines if l.startswith('-') and not l.startswith('---')]
         
         return {"v1": v1, "v2": v2, "added": added, "removed": removed}
     
