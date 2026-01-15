@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>规则管理 - AI-as-Me</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://unpkg.com/alpinejs@3.13.3" defer></script>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <h1>AI-as-Me Dashboard</h1>
+        <div class="nav-links">
+            <a href="/">首页</a>
+            <a href="/inspirations.html">灵感池</a>
+            <a href="/rules.html">规则管理</a>
+            <a href="/stats.html">统计</a>
+            <a href="/logs.html">日志</a>
+        </div>
+    </nav>
+
+    <main class="container" x-data="rules()">
+        <h2>规则版本管理</h2>
+        
+        <div class="rules-list" 
+             hx-get="/api/rules" 
+             hx-trigger="load"
+             hx-target="#rules-list">
+            <div id="rules-list"></div>
+        </div>
+
+        <div x-show="selectedRule" class="rule-history">
+            <h3 x-text="'版本历史: ' + selectedRule"></h3>
+            <div id="history-list"></div>
+        </div>
+
+        <div x-show="showRollbackDialog" class="modal">
+            <div class="modal-content">
+                <h3>确认回滚</h3>
+                <p x-text="'回滚到版本: ' + rollbackVersion"></p>
+                <button @click="confirmRollback()">确认</button>
+                <button @click="showRollbackDialog = false">取消</button>
+            </div>
+        </div>
+    </main>
+
+    <script src="/static/js/rules.js"></script>
+</body>
+</html>

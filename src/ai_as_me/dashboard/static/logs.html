@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日志 - AI-as-Me</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10/dist/ext/sse.js"></script>
+    <script src="https://unpkg.com/alpinejs@3.13.3" defer></script>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <h1>AI-as-Me Dashboard</h1>
+        <div class="nav-links">
+            <a href="/">首页</a>
+            <a href="/inspirations.html">灵感池</a>
+            <a href="/rules.html">规则管理</a>
+            <a href="/stats.html">统计</a>
+            <a href="/logs.html">日志</a>
+        </div>
+    </nav>
+
+    <main class="container" x-data="logs()">
+        <h2>实时日志</h2>
+        
+        <div class="log-controls">
+            <select x-model="level" @change="reconnect()">
+                <option value="">全部级别</option>
+                <option value="DEBUG">DEBUG</option>
+                <option value="INFO">INFO</option>
+                <option value="WARNING">WARNING</option>
+                <option value="ERROR">ERROR</option>
+            </select>
+            <input type="text" x-model="keyword" placeholder="关键词搜索" @input="filterLogs()">
+            <button @click="clearLogs()">清空</button>
+        </div>
+
+        <div class="log-viewer" id="log-viewer" 
+             hx-ext="sse" 
+             sse-connect="/api/logs/stream"
+             sse-swap="message">
+        </div>
+    </main>
+
+    <script src="/static/js/logs.js"></script>
+</body>
+</html>

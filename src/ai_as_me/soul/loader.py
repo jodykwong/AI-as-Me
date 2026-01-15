@@ -143,3 +143,45 @@ class SoulLoader:
             rules.append(self.rules_file.read_text())
         
         return "\n\n".join(rules) if rules else "# No rules defined"
+    
+    def list_rules(self) -> Dict[str, list]:
+        """列表所有规则（API 用）"""
+        from datetime import datetime
+        
+        core_rules = []
+        learned_rules = []
+        
+        # Core 规则
+        if self.core_rules_dir.exists():
+            for f in sorted(self.core_rules_dir.glob("*.md")):
+                stat = f.stat()
+                core_rules.append({
+                    "id": f.stem,
+                    "category": "core",
+                    "content": f.read_text()[:200] + "...",
+                    "created": datetime.fromtimestamp(stat.st_ctime).isoformat()
+                })
+        
+        # Learned 规则
+        if self.learned_rules_dir.exists():
+            for f in sorted(self.learned_rules_dir.glob("*.md")):
+                stat = f.stat()
+                content = f.read_text()
+                # 尝试解析 confidence
+                confidence = 0.0
+                for line in content.split("\n"):
+                    if "confidence:" in line.lower():
+                        try:
+                            confidence = float(line.split(":")[-1].strip())
+                        except:
+                            pass
+                
+                learned_rules.append({
+                    "id": f.stem,
+                    "category": "learned",
+                    "content": content[:200] + "...",
+                    "confidence": confidence,
+                    "created": datetime.fromtimestamp(stat.st_ctime).isoformat()
+                })
+        
+        return {"core": core_rules, "learned": learned_rules}

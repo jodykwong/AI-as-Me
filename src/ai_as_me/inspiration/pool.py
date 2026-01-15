@@ -116,3 +116,15 @@ class InspirationPool:
         if self.index_file.exists():
             return json.loads(self.index_file.read_text())
         return {"total": 0, "by_status": {}, "by_source": {}}
+    
+    # API 别名
+    def get_inspiration(self, id: str) -> Optional[Inspiration]:
+        """获取单个灵感（API 别名）."""
+        return self.get(id)
+    
+    def list_inspirations(self, status: str = None, min_maturity: float = None, limit: int = 50) -> List[Inspiration]:
+        """列表灵感（API 别名）."""
+        inspirations = self.list(status=status, limit=limit)
+        if min_maturity is not None:
+            inspirations = [i for i in inspirations if i.maturity >= min_maturity]
+        return inspirations

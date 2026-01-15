@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-as-Me Dashboard</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://unpkg.com/alpinejs@3.13.3" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <h1>AI-as-Me Dashboard v3.4</h1>
+        <div class="nav-links">
+            <a href="/">首页</a>
+            <a href="/inspirations.html">灵感池</a>
+            <a href="/rules.html">规则管理</a>
+            <a href="/stats.html">统计</a>
+            <a href="/logs.html">日志</a>
+        </div>
+    </nav>
+
+    <main class="container" x-data="dashboard()">
+        <section class="stats-cards">
+            <div class="card" hx-get="/api/stats" hx-trigger="load, every 10s" hx-target="#stats-content">
+                <div id="stats-content">加载中...</div>
+            </div>
+        </section>
+
+        <section class="recent-events">
+            <h2>最近事件</h2>
+            <div hx-get="/api/logs/stream" hx-trigger="load" hx-swap="beforeend" hx-ext="sse">
+                <div id="events-list"></div>
+            </div>
+        </section>
+    </main>
+
+    <script src="/static/js/dashboard.js"></script>
+</body>
+</html>

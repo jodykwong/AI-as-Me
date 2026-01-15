@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>统计 - AI-as-Me</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://unpkg.com/alpinejs@3.13.3" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <h1>AI-as-Me Dashboard</h1>
+        <div class="nav-links">
+            <a href="/">首页</a>
+            <a href="/inspirations.html">灵感池</a>
+            <a href="/rules.html">规则管理</a>
+            <a href="/stats.html">统计</a>
+            <a href="/logs.html">日志</a>
+        </div>
+    </nav>
+
+    <main class="container" x-data="stats()">
+        <h2>系统统计</h2>
+        
+        <div class="charts-grid">
+            <div class="chart-container">
+                <h3>规则应用频率</h3>
+                <canvas id="frequencyChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <h3>效果评分</h3>
+                <canvas id="effectivenessChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <h3>进化趋势</h3>
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+    </main>
+
+    <script src="/static/js/stats.js"></script>
+</body>
+</html>

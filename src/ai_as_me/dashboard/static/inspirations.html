@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>灵感池 - AI-as-Me</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://unpkg.com/alpinejs@3.13.3" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <h1>AI-as-Me Dashboard</h1>
+        <div class="nav-links">
+            <a href="/">首页</a>
+            <a href="/inspirations.html">灵感池</a>
+            <a href="/rules.html">规则管理</a>
+            <a href="/stats.html">统计</a>
+            <a href="/logs.html">日志</a>
+        </div>
+    </nav>
+
+    <main class="container" x-data="inspirations()">
+        <h2>灵感池管理</h2>
+        
+        <div class="filters">
+            <select x-model="status" @change="loadInspirations()">
+                <option value="">全部状态</option>
+                <option value="pending">待处理</option>
+                <option value="mature">成熟</option>
+                <option value="converted">已转化</option>
+            </select>
+            <input type="range" x-model="minMaturity" min="0" max="1" step="0.1" @change="loadInspirations()">
+            <span x-text="'成熟度 ≥ ' + minMaturity"></span>
+        </div>
+
+        <div class="maturity-heatmap">
+            <canvas id="heatmapChart"></canvas>
+        </div>
+
+        <div class="inspirations-list" id="inspirations-list" 
+             hx-get="/api/inspirations" 
+             hx-trigger="load"
+             hx-target="#inspirations-list">
+        </div>
+    </main>
+
+    <script src="/static/js/inspirations.js"></script>
+</body>
+</html>

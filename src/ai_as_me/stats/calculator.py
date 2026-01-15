@@ -117,3 +117,8 @@ class StatsCalculator:
                 continue
         
         return last_time or "never"
+    
+    # API 别名
+    def calculate_stats(self, days: int = 7) -> dict:
+        """计算统计数据（API 别名）."""
+        return self.get_detailed_stats(days)
