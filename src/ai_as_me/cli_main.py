@@ -40,6 +40,72 @@ def first_evolution():
         sys.exit(1)
 
 
+# Epic 2: 规则冲突检测
+@cli.group()
+def soul():
+    """Soul 管理命令"""
+    pass
+
+
+@soul.command('check-conflicts')
+@click.option('--auto-resolve', is_flag=True, help='自动处理冲突')
+def check_conflicts(auto_resolve: bool):
+    """检查规则冲突
+    
+    扫描 soul/rules/core/ 和 soul/rules/learned/，
+    检测可能的规则冲突。
+    """
+    from ai_as_me.soul.conflict_detector import ConflictDetector
+    from ai_as_me.soul.conflict_resolver import ConflictResolver
+    
+    async def run_check():
+        detector = ConflictDetector()
+        conflicts = await detector.scan()
+        
+        if not conflicts:
+            click.echo("✅ 太棒了！没有发现规则冲突")
+            click.echo(f"\nCore Rules: {len(list(detector.core_dir.rglob('*.md')))} 条")
+            click.echo(f"Learned Rules: {len(list(detector.learned_dir.rglob('*.md')))} 条")
+            return
+        
+        click.echo(f"⚠️  发现 {len(conflicts)} 个冲突：\n")
+        
+        resolver = ConflictResolver()
+        for i, conflict in enumerate(conflicts, 1):
+            click.echo(f"冲突 #{i}: {conflict.type}")
+            click.echo(f"  Core Rule: {conflict.core_rule}")
+            click.echo(f"  Learned Rule: {conflict.learned_rule}")
+            click.echo(f"  原因: {conflict.reason}")
+            
+            if auto_resolve:
+                resolution = await resolver.auto_resolve(conflict)
+                click.echo(f"  ✓ 已自动处理: {resolution['action']}")
+            
+            click.echo()
+    
+    asyncio.run(run_check())
+
+
+@soul.command('status')
+def soul_status():
+    """显示 Soul 状态"""
+    from pathlib import Path
+    
+    soul_dir = Path("soul/rules")
+    core_dir = soul_dir / "core"
+    learned_dir = soul_dir / "learned"
+    
+    click.echo("📊 Soul 状态：\n")
+    click.echo(f"Core Rules: {len(list(core_dir.rglob('*.md')))} 条")
+    click.echo(f"Learned Rules: {len(list(learned_dir.rglob('*.md')))} 条")
+    
+    # 检查冲突日志
+    log_file = Path("logs/rule-conflicts.jsonl")
+    if log_file.exists():
+        conflict_count = len(log_file.read_text().splitlines())
+        click.echo(f"历史冲突: {conflict_count} 次")
+
+
 # Story 6.1: Web 服务启动命令
 @cli.command()
 @click.option('--port', default=8080, help='Web 服务端口')
