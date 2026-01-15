@@ -157,6 +157,97 @@ def inspiration_stats():
         click.echo(f"  {source}: {count}")
 
 
+# v3.3: 规则版本管理命令
+@cli.group()
+def rule():
+    """规则版本管理命令"""
+    pass
+
+
+@rule.command('history')
+@click.argument('rule_path')
+def rule_history(rule_path: str):
+    """查看规则版本历史"""
+    from ai_as_me.soul.versioning import RuleVersionManager
+    
+    vm = RuleVersionManager()
+    rule_name = Path(rule_path).stem
+    history = vm.get_history(rule_name)
+    
+    if not history:
+        click.echo(f"📭 {rule_name} 暂无版本历史")
+        return
+    
+    click.echo(f"\n📜 {rule_name} 版本历史:\n")
+    for v in history:
+        click.echo(f"  v{v.version} | {v.timestamp[:16]} | {v.reason}")
+
+
+@rule.command('show')
+@click.argument('rule_path')
+@click.option('--version', '-v', default=None, type=int, help='版本号')
+def rule_show(rule_path: str, version: int):
+    """查看规则内容"""
+    from ai_as_me.soul.versioning import RuleVersionManager
+    
+    path = Path(rule_path)
+    
+    if version:
+        vm = RuleVersionManager()
+        content = vm.get_version(path.stem, version)
+        if content:
+            click.echo(f"\n📄 {path.stem} v{version}:\n")
+            click.echo(content)
+        else:
+            click.echo(f"❌ 版本 v{version} 不存在")
+    else:
+        if path.exists():
+            click.echo(f"\n📄 {path.stem} (当前):\n")
+            click.echo(path.read_text())
+        else:
+            click.echo(f"❌ 规则文件不存在: {rule_path}")
+
+
+@rule.command('diff')
+@click.argument('rule_path')
+@click.option('--v1', required=True, type=int, help='版本1')
+@click.option('--v2', required=True, type=int, help='版本2')
+def rule_diff(rule_path: str, v1: int, v2: int):
+    """对比两个版本"""
+    from ai_as_me.soul.versioning import RuleVersionManager
+    
+    vm = RuleVersionManager()
+    diff = vm.diff(Path(rule_path).stem, v1, v2)
+    
+    click.echo(f"\n🔍 v{v1} vs v{v2}:\n")
+    if diff['removed']:
+        click.echo("删除:")
+        for line in diff['removed'][:10]:
+            click.echo(f"  - {line}")
+    if diff['added']:
+        click.echo("新增:")
+        for line in diff['added'][:10]:
+            click.echo(f"  + {line}")
+    if not diff['removed'] and not diff['added']:
+        click.echo("无差异")
+
+
+@rule.command('rollback')
+@click.argument('rule_path')
+@click.option('--to', 'to_version', required=True, type=int, help='目标版本')
+def rule_rollback(rule_path: str, to_version: int):
+    """回滚到指定版本"""
+    from ai_as_me.soul.versioning import RuleVersionManager
+    
+    vm = RuleVersionManager()
+    path = Path(rule_path)
+    
+    if vm.rollback(path, to_version):
+        click.echo(f"✅ 已回滚到 v{to_version}")
+    else:
+        click.echo(f"❌ 回滚失败，版本 v{to_version} 不存在")
+
+
 @soul.command('check-conflicts')
 @click.option('--auto-resolve', is_flag=True, help='自动处理冲突')
 def check_conflicts(auto_resolve: bool):
