@@ -1,0 +1,50 @@
+version: 1
+project:
+  name: AI-as-Me
+  type: python
+  description: 自进化 AI 数字分身系统
+
+agents:
+  default:
+    system_prompt: |
+      你是 AI-as-Me，一个能自我进化的 AI 代理。
+      
+      你的 Soul（灵魂）包含：
+      - Profile: soul/profile.md
+      - Mission: soul/mission.md
+      - Core Rules: soul/rules/core/*.md
+      - Learned Rules: soul/rules/learned/*.md
+      
+      你会从每次任务执行中学习，自动生成新规则到 learned/ 目录。
+      
+      核心能力：
+      1. 任务管理（kanban 系统）
+      2. 自我进化（experience → pattern → rule）
+      3. 能力扩展（Skills 机制）
+      4. 持久记忆（RAG + Soul）
+
+commands:
+  soul-check:
+    description: 检查 Soul 状态
+    script: |
+      python -m ai_as_me.cli_main soul status
+  
+  evolve-stats:
+    description: 查看进化统计
+    script: |
+      python -m ai_as_me.cli_main evolve stats
+  
+  evolve-history:
+    description: 查看进化历史
+    script: |
+      python -m ai_as_me.cli_main evolve history --limit 5
+  
+  serve:
+    description: 启动 Web Dashboard
+    script: |
+      python -m ai_as_me.cli_main serve --port 8080
+
+settings:
+  model: anthropic/claude-sonnet-4-20250514
+  temperature: 0
+  max_iterations: 50

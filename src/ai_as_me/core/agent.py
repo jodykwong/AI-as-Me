@@ -31,12 +31,28 @@ class Agent:
         self.executor = None
         self.clarifier = None
         
+        # v3.0: Evolution Engine
+        self.evolution_engine = None
+        
         if llm_client:
             from ai_as_me.llm.executor import TaskExecutor
             from ai_as_me.clarify.analyzer import ClarificationAnalyzer
             
             self.executor = TaskExecutor(llm_client, soul_context, tracker)
             self.clarifier = ClarificationAnalyzer(llm_client)
+            
+            # v3.0: 初始化进化引擎
+            try:
+                from ai_as_me.evolution.engine import EvolutionEngine
+                self.evolution_engine = EvolutionEngine({
+                    'experience_dir': str(kanban_dir.parent / 'experience'),
+                    'soul_dir': str(kanban_dir.parent / 'soul'),
+                    'llm_client': llm_client,
+                    'log_path': str(kanban_dir.parent / 'logs' / 'evolution.jsonl')
+                })
+                print("🧬 Evolution Engine initialized")
+            except Exception as e:
+                print(f"⚠️ Evolution Engine init failed: {e}")
         
         # Setup signal handlers
         signal.signal(signal.SIGTERM, self._signal_handler)
@@ -160,10 +176,28 @@ class Agent:
         if success:
             done_path = self._move_task(doing_path, self.done_dir)
             print(f"  ✓ Completed, moved to done")
+            
+            # v3.0: 触发进化
+            if self.evolution_engine:
+                try:
+                    evolution_result = self.evolution_engine.evolve(
+                        task, result or "No result", success=True
+                    )
+                    if evolution_result.get("rules"):
+                        print(f"  🧬 Evolution: {len(evolution_result['rules'])} new rules generated")
+                except Exception as e:
+                    print(f"  ⚠️ Evolution failed: {e}")
         else:
             # Move back to inbox on failure
             inbox_path = self._move_task(doing_path, self.kanban_dir / "inbox")
             print(f"  ↩️ Failed, moved back to inbox")
+            
+            # v3.0: 记录失败经验
+            if self.evolution_engine:
+                try:
+                    self.evolution_engine.evolve(task, "Execution failed", success=False)
+                except Exception:
+                    pass
     
     def start(self):
         """Start the agent main loop."""

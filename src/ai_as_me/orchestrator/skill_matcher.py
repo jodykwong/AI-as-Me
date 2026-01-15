@@ -185,6 +185,9 @@ class SkillMatcher:
         self.history = HistoryTracker(db_path)
         # Story 10.4: BMAD 扩展接口
         self.bmad_extension = None
+        # v3.0: Skills 集成
+        from ai_as_me.skills.loader import SkillLoader
+        self.skill_loader = SkillLoader(Path("skills"))
     
     def set_bmad_extension(self, extension):
         """设置 BMAD 技能扩展（预留接口）"""
@@ -227,6 +230,27 @@ class SkillMatcher:
         )
         
         return best_tool
+    
+    def match_with_skills(self, task_description: str, task=None) -> dict:
+        """匹配工具并检查 Skills（v3.0）"""
+        # 1. 常规工具匹配
+        tool = self.match(task_description)
+        
+        # 2. 检测能力缺口
+        gap = self.detect_capability_gap(task_description)
+        
+        # 3. 如果有缺口，尝试 Skills
+        skill_name = None
+        if gap:
+            bmad_skill = self.skill_loader.load_skill("bmad")
+            if bmad_skill and self.skill_loader.should_invoke(bmad_skill, task, gap):
+                skill_name = "bmad"
+        
+        return {
+            "tool": tool,
+            "skill": skill_name,
+            "capability_gap": gap
+        }
     
     def _calculate_scores(self, task_type: TaskType) -> dict[str, float]:
         """

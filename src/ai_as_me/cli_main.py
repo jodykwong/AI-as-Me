@@ -47,6 +47,43 @@ def version():
     click.echo(f"ai-as-me version {__version__}")
 
 
+@cli.group()
+def soul():
+    """Soul 管理命令"""
+    pass
+
+
+@soul.command()
+def status():
+    """检查 Soul 状态"""
+    from ai_as_me.soul.loader import SoulLoader
+    loader = SoulLoader(Path("soul"))
+    status = loader.check_status()
+    
+    click.echo("📊 Soul Status:")
+    click.echo(f"  Profile: {'✓' if status['profile'] else '✗'}")
+    click.echo(f"  Rules: {'✓' if status['rules'] else '✗'}")
+    click.echo(f"  Mission: {'✓' if status['mission'] else '✗'}")
+    
+    # v3.0: 检查规则目录
+    rules_dir = Path("soul/rules")
+    if rules_dir.exists():
+        core_count = len(list((rules_dir / "core").glob("*.md")))
+        learned_count = len(list((rules_dir / "learned").glob("*.md")))
+        click.echo(f"\n📚 Rules Structure (v3.0):")
+        click.echo(f"  Core rules: {core_count}")
+        click.echo(f"  Learned rules: {learned_count}")
+
+
+@soul.command()
+def migrate():
+    """迁移 Soul 到 v3.0 结构"""
+    from ai_as_me.soul.migrator import SoulMigrator
+    migrator = SoulMigrator(Path("soul"))
+    migrator.migrate()
+    click.echo("✓ Migration complete")
+
+
 @cli.command()
 def check_env():
     """检查运行环境依赖"""
@@ -654,6 +691,44 @@ if __name__ == "__main__":
     cli()
 
 
+# v3.0: Soul 管理命令
+@cli.group()
+def soul():
+    """Soul 管理命令"""
+    pass
+
+
+@soul.command()
+def status():
+    """检查 Soul 状态"""
+    from ai_as_me.soul.loader import SoulLoader
+    loader = SoulLoader(Path("soul"))
+    status = loader.check_status()
+    
+    click.echo("📊 Soul Status:")
+    click.echo(f"  Profile: {'✓' if status['profile'] else '✗'}")
+    click.echo(f"  Rules: {'✓' if status['rules'] else '✗'}")
+    click.echo(f"  Mission: {'✓' if status['mission'] else '✗'}")
+    
+    # v3.0: 检查规则目录
+    rules_dir = Path("soul/rules")
+    if rules_dir.exists():
+        core_count = len(list((rules_dir / "core").glob("*.md")))
+        learned_count = len(list((rules_dir / "learned").glob("*.md")))
+        click.echo(f"\n📚 Rules Structure (v3.0):")
+        click.echo(f"  Core rules: {core_count}")
+        click.echo(f"  Learned rules: {learned_count}")
+
+
+@soul.command()
+def migrate():
+    """迁移 Soul 到 v3.0 结构"""
+    from ai_as_me.soul.migrator import SoulMigrator
+    migrator = SoulMigrator(Path("soul"))
+    migrator.migrate()
+    click.echo("✓ Migration complete")
+
+
 
 @cli.command()
 def check_tools():
@@ -700,3 +775,49 @@ def check_tools():
     click.echo()
     click.echo("✅ Agent CLI 工具检查完成")
     click.echo("\n💡 提示: 首次使用时工具会自动下载")
+
+
+@cli.group()
+def evolve():
+    """进化相关命令"""
+    pass
+
+
+@evolve.command()
+@click.option('--days', default=7, help='统计天数')
+def stats(days):
+    """显示进化统计"""
+    from ai_as_me.evolution.logger import EvolutionLogger
+    logger = EvolutionLogger(Path("logs/evolution.jsonl"))
+    stats_data = logger.get_stats(days)
+    
+    click.echo(f"📊 进化统计（最近 {days} 天）")
+    click.echo(f"  规则生成: {stats_data['total_rules']} 条")
+    click.echo(f"  模式识别: {stats_data['total_patterns']} 个")
+    click.echo(f"  经验记录: {stats_data['total_experiences']} 次")
+
+
+@evolve.command()
+@click.option('--limit', default=10, help='显示数量')
+def history(limit):
+    """显示进化历史"""
+    from ai_as_me.evolution.logger import EvolutionLogger
+    logger = EvolutionLogger(Path("logs/evolution.jsonl"))
+    events = logger.get_recent_events(limit)
+    
+    if not events:
+        click.echo("暂无进化记录")
+        return
+    
+    click.echo(f"📜 最近 {len(events)} 次进化事件:\n")
+    for i, event in enumerate(events, 1):
+        timestamp = event['timestamp'][:19]
+        task_id = event['task_id']
+        rules = event.get('rules_generated', 0)
+        patterns = event.get('patterns_found', 0)
+        
+        click.echo(f"{i}. [{timestamp}] {task_id}")
+        click.echo(f"   模式: {patterns}, 规则: {rules}")
+        if event.get('rule_categories'):
+            click.echo(f"   类别: {', '.join(event['rule_categories'])}")
+        click.echo()
