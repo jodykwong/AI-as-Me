@@ -16,7 +16,13 @@ class FirstEvolutionDemo:
     
     def __init__(self):
         self.console = Console()
-        self.evolution_engine = EvolutionEngine()
+        config = {
+            'experience_dir': 'experience',
+            'vector_store': None,
+            'llm_client': None,
+            'soul_dir': 'soul'
+        }
+        self.evolution_engine = EvolutionEngine(config)
         self.sample_task = SampleTask()
         self.progress = ProgressTracker(total_steps=5)
         
@@ -32,22 +38,30 @@ class FirstEvolutionDemo:
             
             # Step 2: 收集经验
             self.progress.update(2, "收集经验到 experience/")
-            experience = await self.evolution_engine.collector.collect(task_result)
+            experience = self.evolution_engine.collector.collect(
+                task_result['task'],
+                task_result['result'],
+                task_result['success'],
+                task_result.get('duration', 0.0)
+            )
             self.progress.complete(2)
             
             # Step 3: 识别模式
             self.progress.update(3, "识别可复用模式")
-            pattern = await self.evolution_engine.recognizer.recognize([experience])
+            patterns = self.evolution_engine.recognizer.recognize([experience])
+            pattern = patterns[0] if patterns else None
+            if not pattern:
+                raise Exception("未识别到模式")
             self.progress.complete(3)
             
             # Step 4: 生成规则
             self.progress.update(4, "生成规则")
-            rule = await self.evolution_engine.generator.generate(pattern)
+            rule = self.evolution_engine.generator.generate(pattern)
             self.progress.complete(4)
             
             # Step 5: 写入 Soul
             self.progress.update(5, "写入 soul/rules/learned/")
-            rule_path = await self.evolution_engine.writer.write(rule)
+            rule_path = self.evolution_engine.writer.write(rule)
             self.progress.complete(5)
             
             # 显示完成摘要
