@@ -106,6 +106,28 @@ def soul_status():
         click.echo(f"历史冲突: {conflict_count} 次")
 
 
+@soul.command('stats')
+@click.option('--days', default=7, help='统计天数')
+def soul_stats(days: int):
+    """显示进化统计"""
+    from pathlib import Path
+    from ai_as_me.stats import StatsCalculator, StatsVisualizer
+    
+    calc = StatsCalculator()
+    viz = StatsVisualizer()
+    stats = calc.get_detailed_stats(days)
+    
+    click.echo(f"\n📊 进化统计（最近 {days} 天）\n")
+    
+    click.echo("🔥 规则应用频率（次/天）：")
+    click.echo(viz.render_ascii_bar(stats['application_frequency']))
+    
+    click.echo("\n⭐ 规则有效性评分：")
+    click.echo(viz.render_ascii_trend(stats['effectiveness_scores']))
+    
+    click.echo(f"\n🎯 模式识别准确率: {stats['pattern_accuracy']:.2%}\n")
+
+
 # Story 6.1: Web 服务启动命令
 @cli.command()
 @click.option('--port', default=8080, help='Web 服务端口')
