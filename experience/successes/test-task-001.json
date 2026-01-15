@@ -1,0 +1,9 @@
+{
+  "task_id": "test-task-001",
+  "description": "Test task for code review",
+  "tool_used": "claude_code",
+  "result": "Test result",
+  "success": true,
+  "duration": 1.5,
+  "timestamp": "2026-01-15T19:38:41.176833"
+}
