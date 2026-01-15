@@ -40,7 +40,7 @@ def setup_logging(
     
     # 文件 handler（JSON + 轮转）
     file_handler = RotatingFileHandler(
-        log_dir / 'app.log',
+        log_dir / 'agent.log',
         maxBytes=max_bytes,
         backupCount=backup_count,
         encoding='utf-8'

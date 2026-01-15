@@ -1,5 +1,5 @@
 """灵感池 API."""
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pathlib import Path
 from typing import List, Optional
 from pydantic import BaseModel
@@ -25,12 +25,22 @@ class InspirationCreate(BaseModel):
     content: str
     priority: str = "medium"
     tags: List[str] = []
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "content": "探索新的进化策略",
+                "priority": "high",
+                "tags": ["evolution", "strategy"]
+            }
+        }
+    }
 
 
 @router.get("/inspirations", response_model=List[InspirationResponse])
 async def list_inspirations(
     status: Optional[str] = None,
-    min_maturity: Optional[float] = None
+    min_maturity: Optional[float] = Query(None, ge=0.0, le=1.0)
 ):
     """获取灵感列表."""
     pool = InspirationPool(Path("soul/inspiration"))

@@ -29,3 +29,10 @@ kanban/doing/*
 kanban/done/*
 !kanban/doing/.gitkeep
 !kanban/done/.gitkeep
+
+# Test data
+data/*.db
+experience/successes/*.json
+experience/failures/*.json
+!experience/successes/.gitkeep
+!experience/failures/.gitkeep

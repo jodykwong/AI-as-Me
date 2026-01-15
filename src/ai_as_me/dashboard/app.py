@@ -40,3 +40,27 @@ async def health_check():
 async def index():
     """首页."""
     return FileResponse(static_dir / "index.html")
+
+
+@app.get("/inspirations.html")
+async def inspirations_page():
+    """灵感池页面."""
+    return FileResponse(static_dir / "inspirations.html")
+
+
+@app.get("/rules.html")
+async def rules_page():
+    """规则管理页面."""
+    return FileResponse(static_dir / "rules.html")
+
+
+@app.get("/stats.html")
+async def stats_page():
+    """统计图表页面."""
+    return FileResponse(static_dir / "stats.html")
+
+
+@app.get("/logs.html")
+async def logs_page():
+    """日志查看器页面."""
+    return FileResponse(static_dir / "logs.html")

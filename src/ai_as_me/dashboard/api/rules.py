@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException
 from pathlib import Path
 from typing import List, Dict
 from pydantic import BaseModel
+from functools import lru_cache
 from ai_as_me.soul.versioning import RuleVersionManager
 from ai_as_me.soul.loader import SoulLoader
 
@@ -24,11 +25,30 @@ class RuleInfo(BaseModel):
     version_count: int
 
 
-@router.get("/rules")
-async def list_rules() -> Dict:
-    """获取规则列表."""
+class RulesResponse(BaseModel):
+    """规则列表响应模型."""
+    core: List[Dict]
+    learned: List[Dict]
+
+
+@lru_cache(maxsize=1)
+def _get_cached_rules() -> RulesResponse:
+    """缓存规则列表（1分钟）."""
     loader = SoulLoader(Path("soul"))
-    return loader.list_rules()
+    rules = loader.list_rules()
+    return RulesResponse(
+        core=rules.get("core", []),
+        learned=rules.get("learned", [])
+    )
+
+
+@router.get("/rules", response_model=RulesResponse)
+async def list_rules() -> RulesResponse:
+    """获取规则列表."""
+    try:
+        return _get_cached_rules()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load rules: {str(e)}")
 
 
 @router.get("/rules/{rule_name}/history", response_model=List[RuleVersion])
