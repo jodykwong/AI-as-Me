@@ -34,6 +34,9 @@ class Agent:
         # v3.0: Evolution Engine
         self.evolution_engine = None
         
+        # v3.1: Conflict Detector
+        self.conflict_detector = None
+        
         if llm_client:
             from ai_as_me.llm.executor import TaskExecutor
             from ai_as_me.clarify.analyzer import ClarificationAnalyzer
@@ -53,6 +56,24 @@ class Agent:
                 print("🧬 Evolution Engine initialized")
             except Exception as e:
                 print(f"⚠️ Evolution Engine init failed: {e}")
+            
+            # v3.1: 初始化冲突检测器（启动时自动扫描）
+            try:
+                from ai_as_me.soul.conflict_detector import ConflictDetector
+                from ai_as_me.soul.conflict_resolver import ConflictResolver
+                import asyncio
+                
+                self.conflict_detector = ConflictDetector(kanban_dir.parent / 'soul' / 'rules')
+                conflicts = asyncio.run(self.conflict_detector.scan())
+                
+                if conflicts:
+                    print(f"⚠️  发现 {len(conflicts)} 个规则冲突")
+                    resolver = ConflictResolver(kanban_dir.parent / 'logs' / 'rule-conflicts.jsonl')
+                    for conflict in conflicts:
+                        asyncio.run(resolver.auto_resolve(conflict))
+                    print("✓ 冲突已自动处理（Core rules 优先）")
+            except Exception as e:
+                print(f"⚠️ Conflict Detector init failed: {e}")
         
         # Setup signal handlers
         signal.signal(signal.SIGTERM, self._signal_handler)
