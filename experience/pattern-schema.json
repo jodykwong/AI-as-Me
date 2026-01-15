@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Pattern",
+  "description": "识别的可复用模式数据格式",
+  "type": "object",
+  "required": ["pattern_id", "description", "frequency", "source_tasks", "confidence", "category"],
+  "properties": {
+    "pattern_id": {
+      "type": "string",
+      "description": "模式唯一标识符",
+      "pattern": "^pattern-[0-9]+$"
+    },
+    "description": {
+      "type": "string",
+      "description": "模式描述"
+    },
+    "frequency": {
+      "type": "integer",
+      "description": "出现频率",
+      "minimum": 1
+    },
+    "source_tasks": {
+      "type": "array",
+      "description": "来源任务列表",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "confidence": {
+      "type": "number",
+      "description": "置信度（0.0-1.0）",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "category": {
+      "type": "string",
+      "description": "模式类别",
+      "enum": ["工具选择", "技术决策", "工作流程", "错误处理", "其他"]
+    }
+  }
+}
