@@ -9,8 +9,13 @@ class SoulLoader:
     def __init__(self, soul_dir: Path):
         self.soul_dir = soul_dir
         self.profile_file = soul_dir / "profile.md"
-        self.rules_file = soul_dir / "rules.md"
+        self.rules_file = soul_dir / "rules.md"  # 兼容旧版
         self.mission_file = soul_dir / "mission.md"
+        
+        # v3.0 新增
+        self.rules_dir = soul_dir / "rules"
+        self.core_rules_dir = self.rules_dir / "core"
+        self.learned_rules_dir = self.rules_dir / "learned"
     
     def initialize(self):
         """Initialize soul directory with template files."""
@@ -98,15 +103,43 @@ class SoulLoader:
         Returns:
             Combined soul context or None if files don't exist
         """
+        # 自动迁移检查
+        if self.rules_file.exists() and not self.rules_dir.exists():
+            from ai_as_me.soul.migrator import SoulMigrator
+            migrator = SoulMigrator(self.soul_dir)
+            migrator.migrate()
+        
         parts = []
         
         if self.profile_file.exists():
             parts.append(f"# Profile\n{self.profile_file.read_text()}")
         
-        if self.rules_file.exists():
-            parts.append(f"# Rules\n{self.rules_file.read_text()}")
+        # 加载规则（新结构优先）
+        rules_content = self.load_all_rules()
+        if rules_content:
+            parts.append(f"# Rules\n{rules_content}")
         
         if self.mission_file.exists():
             parts.append(f"# Mission\n{self.mission_file.read_text()}")
         
         return "\n\n".join(parts) if parts else None
+    
+    def load_all_rules(self) -> str:
+        """加载所有规则（core + learned）"""
+        rules = []
+        
+        # 加载 core 规则
+        if self.core_rules_dir.exists():
+            for f in sorted(self.core_rules_dir.glob("*.md")):
+                rules.append(f"## Core Rule: {f.stem}\n{f.read_text()}")
+        
+        # 加载 learned 规则
+        if self.learned_rules_dir.exists():
+            for f in sorted(self.learned_rules_dir.glob("*.md")):
+                rules.append(f"## Learned Rule: {f.stem}\n{f.read_text()}")
+        
+        # 兼容旧版 rules.md
+        if not rules and self.rules_file.exists():
+            rules.append(self.rules_file.read_text())
+        
+        return "\n\n".join(rules) if rules else "# No rules defined"

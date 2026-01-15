@@ -47,6 +47,43 @@ def version():
     click.echo(f"ai-as-me version {__version__}")
 
 
+@cli.group()
+def soul():
+    """Soul 管理命令"""
+    pass
+
+
+@soul.command()
+def status():
+    """检查 Soul 状态"""
+    from ai_as_me.soul.loader import SoulLoader
+    loader = SoulLoader(Path("soul"))
+    status = loader.check_status()
+    
+    click.echo("📊 Soul Status:")
+    click.echo(f"  Profile: {'✓' if status['profile'] else '✗'}")
+    click.echo(f"  Rules: {'✓' if status['rules'] else '✗'}")
+    click.echo(f"  Mission: {'✓' if status['mission'] else '✗'}")
+    
+    # v3.0: 检查规则目录
+    rules_dir = Path("soul/rules")
+    if rules_dir.exists():
+        core_count = len(list((rules_dir / "core").glob("*.md")))
+        learned_count = len(list((rules_dir / "learned").glob("*.md")))
+        click.echo(f"\n📚 Rules Structure (v3.0):")
+        click.echo(f"  Core rules: {core_count}")
+        click.echo(f"  Learned rules: {learned_count}")
+
+
+@soul.command()
+def migrate():
+    """迁移 Soul 到 v3.0 结构"""
+    from ai_as_me.soul.migrator import SoulMigrator
+    migrator = SoulMigrator(Path("soul"))
+    migrator.migrate()
+    click.echo("✓ Migration complete")
+
+
 @cli.command()
 def check_env():
     """检查运行环境依赖"""
@@ -652,6 +689,44 @@ def start(task_id, tool, fallback, no_soul):
 
 if __name__ == "__main__":
     cli()
+
+
+# v3.0: Soul 管理命令
+@cli.group()
+def soul():
+    """Soul 管理命令"""
+    pass
+
+
+@soul.command()
+def status():
+    """检查 Soul 状态"""
+    from ai_as_me.soul.loader import SoulLoader
+    loader = SoulLoader(Path("soul"))
+    status = loader.check_status()
+    
+    click.echo("📊 Soul Status:")
+    click.echo(f"  Profile: {'✓' if status['profile'] else '✗'}")
+    click.echo(f"  Rules: {'✓' if status['rules'] else '✗'}")
+    click.echo(f"  Mission: {'✓' if status['mission'] else '✗'}")
+    
+    # v3.0: 检查规则目录
+    rules_dir = Path("soul/rules")
+    if rules_dir.exists():
+        core_count = len(list((rules_dir / "core").glob("*.md")))
+        learned_count = len(list((rules_dir / "learned").glob("*.md")))
+        click.echo(f"\n📚 Rules Structure (v3.0):")
+        click.echo(f"  Core rules: {core_count}")
+        click.echo(f"  Learned rules: {learned_count}")
+
+
+@soul.command()
+def migrate():
+    """迁移 Soul 到 v3.0 结构"""
+    from ai_as_me.soul.migrator import SoulMigrator
+    migrator = SoulMigrator(Path("soul"))
+    migrator.migrate()
+    click.echo("✓ Migration complete")
 
 
 
