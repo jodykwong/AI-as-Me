@@ -2,9 +2,21 @@
 import time
 import signal
 import sys
+import logging
 from pathlib import Path
 from typing import Optional
 from datetime import datetime
+
+# 配置日志
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('logs/agent.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 
 class Agent:
@@ -36,6 +48,10 @@ class Agent:
         
         # v3.1: Conflict Detector
         self.conflict_detector = None
+        
+        # v3.2: Inspiration Capturer
+        self.inspiration_capturer = None
+        self.inspiration_pool = None
         
         if llm_client:
             from ai_as_me.llm.executor import TaskExecutor
@@ -74,6 +90,17 @@ class Agent:
                     print("✓ 冲突已自动处理（Core rules 优先）")
             except Exception as e:
                 print(f"⚠️ Conflict Detector init failed: {e}")
+            
+            # v3.2: 初始化灵感捕获器
+            try:
+                from ai_as_me.inspiration import InspirationCapturer, InspirationPool
+                self.inspiration_capturer = InspirationCapturer()
+                self.inspiration_pool = InspirationPool(kanban_dir.parent / 'soul' / 'inspiration')
+                print("💡 Inspiration Capturer initialized")
+                logger.info("Inspiration Capturer initialized")
+            except Exception as e:
+                print(f"⚠️ Inspiration Capturer init failed: {e}")
+                logger.error(f"Inspiration Capturer init failed: {e}")
         
         # Setup signal handlers
         signal.signal(signal.SIGTERM, self._signal_handler)
@@ -208,6 +235,23 @@ class Agent:
                         print(f"  🧬 Evolution: {len(evolution_result['rules'])} new rules generated")
                 except Exception as e:
                     print(f"  ⚠️ Evolution failed: {e}")
+            
+            # v3.2: 自动捕获灵感（任务成功时）
+            if self.inspiration_capturer and self.inspiration_pool:
+                try:
+                    task_result = {
+                        "task_id": task_path.stem,
+                        "success": True,
+                        "result": result or "Task completed"
+                    }
+                    inspiration = self.inspiration_capturer.capture_from_task(task_result)
+                    if inspiration:
+                        insp_id = self.inspiration_pool.add(inspiration)
+                        print(f"  💡 Inspiration captured: {insp_id}")
+                        logger.info(f"Inspiration captured from successful task: {insp_id}")
+                except Exception as e:
+                    print(f"  ⚠️ Inspiration capture failed: {e}")
+                    logger.error(f"Inspiration capture failed: {e}")
         else:
             # Move back to inbox on failure
             inbox_path = self._move_task(doing_path, self.kanban_dir / "inbox")
@@ -219,6 +263,22 @@ class Agent:
                     self.evolution_engine.evolve(task, "Execution failed", success=False)
                 except Exception:
                     pass
+            
+            # v3.2: 自动捕获灵感（任务失败时）
+            if self.inspiration_capturer and self.inspiration_pool:
+                try:
+                    task_result = {
+                        "task_id": task_path.stem,
+                        "success": False,
+                        "error": "Execution failed"
+                    }
+                    inspiration = self.inspiration_capturer.capture_from_task(task_result)
+                    if inspiration:
+                        insp_id = self.inspiration_pool.add(inspiration)
+                        print(f"  💡 Failure inspiration captured: {insp_id}")
+                        logger.info(f"Inspiration captured from failed task: {insp_id}")
+                except Exception as e:
+                    logger.error(f"Inspiration capture from failure failed: {e}")
     
     def start(self):
         """Start the agent main loop."""
