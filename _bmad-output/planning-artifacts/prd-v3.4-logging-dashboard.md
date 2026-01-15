@@ -52,6 +52,9 @@ GET /api/logs?level=ERROR&module=agent&limit=100
 **FR-2.2.2: 灵感池页面**
 - 灵感列表（分页、筛选）
 - 成熟度热力图
+  - X轴：创建时间（按天）
+  - Y轴：来源类型（conversation/task/manual）
+  - 颜色：成熟度（0-1，绿色→红色）
 - 灵感详情弹窗
 - 转化操作按钮
 
@@ -105,6 +108,13 @@ GET    /api/logs                  # 日志查询
 GET    /api/logs/stream           # 实时流（SSE）
 ```
 
+### 3.5 导出 API
+```
+GET    /api/export/inspirations   # 导出灵感池（JSON/CSV）
+GET    /api/export/rules          # 导出规则列表
+GET    /api/export/stats          # 导出统计数据
+```
+
 ---
 
 ## 4. UI 设计要点
@@ -128,6 +138,12 @@ GET    /api/logs/stream           # 实时流（SSE）
 - 实时更新（WebSocket/SSE）
 - 操作确认（删除、回滚）
 - 加载状态提示
+
+### 4.3 空状态设计
+- **灵感池为空**: 显示引导图 + "添加第一个灵感" 按钮
+- **规则列表为空**: 显示 "运行 Demo 生成第一条规则" 引导
+- **日志为空**: 显示 "系统运行正常，暂无日志"
+- **统计无数据**: 显示 "开始使用后将显示统计数据"
 
 ---
 

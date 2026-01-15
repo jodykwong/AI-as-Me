@@ -42,7 +42,7 @@
 ### 2.1 日志模块
 
 ```python
-src/ai_as_me/logging/
+src/ai_as_me/log_system/
 ├── __init__.py
 ├── config.py          # 日志配置
 ├── formatter.py       # JSON 格式化
@@ -101,7 +101,11 @@ src/ai_as_me/dashboard/
 │   └── logs.py
 ├── models/
 │   ├── __init__.py
-│   └── responses.py   # Pydantic 模型
+│   ├── responses.py   # Pydantic 响应模型
+│   └── errors.py      # 统一错误模型
+├── middleware/
+│   ├── __init__.py
+│   └── error_handler.py  # 全局错误处理
 └── static/
     ├── index.html
     ├── css/
@@ -109,6 +113,19 @@ src/ai_as_me/dashboard/
     └── js/
         ├── app.js
         └── charts.js
+```
+
+### 3.2 错误响应格式
+
+```json
+{
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "Inspiration not found",
+    "details": {"id": "insp_001"}
+  },
+  "timestamp": "2026-01-15T21:00:00Z"
+}
 ```
 
 ### 3.2 前端架构
