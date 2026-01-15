@@ -4,6 +4,7 @@ from .collector import ExperienceCollector
 from .recognizer import PatternRecognizer
 from .generator import RuleGenerator
 from .writer import SoulWriter
+from .logger import EvolutionLogger
 
 
 class EvolutionEngine:
@@ -18,6 +19,7 @@ class EvolutionEngine:
         )
         self.generator = RuleGenerator(config['llm_client'])
         self.writer = SoulWriter(Path(config['soul_dir']))
+        self.logger = EvolutionLogger(Path(config.get('log_path', 'logs/evolution.jsonl')))
     
     def evolve(self, task, result: str, success: bool, duration: float = 0) -> dict:
         """完整进化流程"""
@@ -37,6 +39,10 @@ class EvolutionEngine:
             if rule:
                 path = self.writer.write_rule(rule)
                 rules.append({"rule": rule, "path": path})
+        
+        # 5. 记录日志
+        rule_objs = [r["rule"] for r in rules]
+        self.logger.log(exp, patterns, rule_objs)
         
         return {
             "experience": exp,

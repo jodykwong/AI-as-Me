@@ -775,3 +775,49 @@ def check_tools():
     click.echo()
     click.echo("✅ Agent CLI 工具检查完成")
     click.echo("\n💡 提示: 首次使用时工具会自动下载")
+
+
+@cli.group()
+def evolve():
+    """进化相关命令"""
+    pass
+
+
+@evolve.command()
+@click.option('--days', default=7, help='统计天数')
+def stats(days):
+    """显示进化统计"""
+    from ai_as_me.evolution.logger import EvolutionLogger
+    logger = EvolutionLogger(Path("logs/evolution.jsonl"))
+    stats_data = logger.get_stats(days)
+    
+    click.echo(f"📊 进化统计（最近 {days} 天）")
+    click.echo(f"  规则生成: {stats_data['total_rules']} 条")
+    click.echo(f"  模式识别: {stats_data['total_patterns']} 个")
+    click.echo(f"  经验记录: {stats_data['total_experiences']} 次")
+
+
+@evolve.command()
+@click.option('--limit', default=10, help='显示数量')
+def history(limit):
+    """显示进化历史"""
+    from ai_as_me.evolution.logger import EvolutionLogger
+    logger = EvolutionLogger(Path("logs/evolution.jsonl"))
+    events = logger.get_recent_events(limit)
+    
+    if not events:
+        click.echo("暂无进化记录")
+        return
+    
+    click.echo(f"📜 最近 {len(events)} 次进化事件:\n")
+    for i, event in enumerate(events, 1):
+        timestamp = event['timestamp'][:19]
+        task_id = event['task_id']
+        rules = event.get('rules_generated', 0)
+        patterns = event.get('patterns_found', 0)
+        
+        click.echo(f"{i}. [{timestamp}] {task_id}")
+        click.echo(f"   模式: {patterns}, 规则: {rules}")
+        if event.get('rule_categories'):
+            click.echo(f"   类别: {', '.join(event['rule_categories'])}")
+        click.echo()
