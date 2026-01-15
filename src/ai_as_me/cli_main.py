@@ -2,6 +2,7 @@
 import click
 import sys
 import subprocess
+import asyncio
 from pathlib import Path
 import os
 from ai_as_me import __version__
@@ -12,6 +13,31 @@ from ai_as_me import __version__
 def cli():
     """AI-as-Me: 自进化AI数字分身系统"""
     pass
+
+
+# Epic 1: 首次进化示例
+@cli.group()
+def demo():
+    """演示和教程命令"""
+    pass
+
+
+@demo.command('first-evolution')
+def first_evolution():
+    """首次进化体验 Demo（约 5-8 分钟）
+    
+    这个 Demo 会：
+    • 执行一个示例任务
+    • 让你看到 AI 如何学习
+    • 生成第一条规则
+    """
+    from ai_as_me.demo import FirstEvolutionDemo
+    
+    demo_instance = FirstEvolutionDemo()
+    result = asyncio.run(demo_instance.run())
+    
+    if not result.get("success"):
+        sys.exit(1)
 
 
 # Story 6.1: Web 服务启动命令
