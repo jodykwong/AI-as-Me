@@ -47,6 +47,116 @@ def soul():
     pass
 
 
+# v3.2: 灵感池命令
+@cli.group()
+def inspiration():
+    """灵感池管理命令"""
+    pass
+
+
+@inspiration.command('add')
+@click.argument('content')
+@click.option('--tags', default='', help='标签，逗号分隔')
+@click.option('--priority', default='medium', type=click.Choice(['low', 'medium', 'high']))
+def inspiration_add(content: str, tags: str, priority: str):
+    """添加灵感"""
+    from ai_as_me.inspiration import InspirationPool, Inspiration
+    
+    pool = InspirationPool()
+    insp = Inspiration(
+        content=content,
+        source="manual",
+        tags=[t.strip() for t in tags.split(',') if t.strip()],
+        priority=priority
+    )
+    insp_id = pool.add(insp)
+    click.echo(f"✅ 灵感已添加: {insp_id}")
+
+
+@inspiration.command('list')
+@click.option('--status', default=None, help='按状态筛选')
+@click.option('--limit', default=20, help='显示数量')
+def inspiration_list(status: str, limit: int):
+    """列出灵感"""
+    from ai_as_me.inspiration import InspirationPool
+    
+    pool = InspirationPool()
+    inspirations = pool.list(status=status, limit=limit)
+    
+    if not inspirations:
+        click.echo("💭 灵感池为空")
+        return
+    
+    click.echo(f"\n💡 灵感列表 ({len(inspirations)} 条):\n")
+    for insp in inspirations:
+        status_icon = {"incubating": "🥚", "mature": "🐣", "converted": "✅", "archived": "📦"}.get(insp.status, "❓")
+        click.echo(f"{status_icon} [{insp.id}] {insp.content[:50]}...")
+        click.echo(f"   成熟度: {insp.maturity:.0%} | 优先级: {insp.priority}\n")
+
+
+@inspiration.command('mature')
+def inspiration_mature():
+    """列出成熟的灵感"""
+    from ai_as_me.inspiration import InspirationPool, InspirationIncubator
+    
+    pool = InspirationPool()
+    incubator = InspirationIncubator(pool)
+    
+    # 先孵化更新成熟度
+    incubator.incubate_all()
+    mature_list = incubator.get_mature()
+    
+    if not mature_list:
+        click.echo("🥚 暂无成熟的灵感")
+        return
+    
+    click.echo(f"\n🐣 成熟灵感 ({len(mature_list)} 条):\n")
+    for insp in mature_list:
+        click.echo(f"[{insp.id}] {insp.content}")
+        click.echo(f"   成熟度: {insp.maturity:.0%} | 可转化为规则\n")
+
+
+@inspiration.command('convert')
+@click.argument('id')
+@click.option('--to', 'target', default='rule', type=click.Choice(['rule', 'task']))
+def inspiration_convert(id: str, target: str):
+    """转化灵感为规则或任务"""
+    from ai_as_me.inspiration import InspirationPool, InspirationConverter
+    
+    pool = InspirationPool()
+    converter = InspirationConverter(pool)
+    
+    insp = pool.get(id)
+    if not insp:
+        click.echo(f"❌ 未找到灵感: {id}")
+        return
+    
+    if target == 'rule':
+        path = converter.to_rule(insp)
+        click.echo(f"✅ 已转化为规则: {path}")
+    else:
+        desc = converter.to_task(insp)
+        click.echo(f"✅ 已转化为任务: {desc}")
+
+
+@inspiration.command('stats')
+def inspiration_stats():
+    """显示灵感池统计"""
+    from ai_as_me.inspiration import InspirationPool
+    
+    pool = InspirationPool()
+    stats = pool.get_stats()
+    
+    click.echo("\n📊 灵感池统计:\n")
+    click.echo(f"总数: {stats.get('total', 0)}")
+    click.echo(f"\n按状态:")
+    for status, count in stats.get('by_status', {}).items():
+        click.echo(f"  {status}: {count}")
+    click.echo(f"\n按来源:")
+    for source, count in stats.get('by_source', {}).items():
+        click.echo(f"  {source}: {count}")
+
+
 @soul.command('check-conflicts')
 @click.option('--auto-resolve', is_flag=True, help='自动处理冲突')
 def check_conflicts(auto_resolve: bool):
