@@ -32,13 +32,18 @@ async def query_logs(
     logger: Optional[str] = None
 ):
     """查询日志."""
-    query = LogQuery()
-    logs = query.query(level=level, logger=logger, limit=limit)
-    
-    return LogQueryResponse(
-        logs=logs,
-        total=len(logs)
-    )
+    try:
+        query = LogQuery()
+        logs = query.query(level=level, logger=logger, limit=limit)
+        
+        return LogQueryResponse(
+            logs=logs,
+            total=len(logs)
+        )
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Log file not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Log query failed: {str(e)}")
 
 
 @router.get("/logs/export")
@@ -47,17 +52,22 @@ async def export_logs(
     level: Optional[str] = None
 ):
     """导出日志."""
-    query = LogQuery()
-    data = query.export(format=format, level=level)
-    
-    media_type = "application/json" if format == "json" else "text/csv"
-    filename = f"logs.{format}"
-    
-    return Response(
-        content=data,
-        media_type=media_type,
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
-    )
+    try:
+        query = LogQuery()
+        data = query.export(format=format, level=level)
+        
+        media_type = "application/json" if format == "json" else "text/csv"
+        filename = f"logs.{format}"
+        
+        return Response(
+            content=data,
+            media_type=media_type,
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Log file not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Log export failed: {str(e)}")
 
 
 async def log_stream_generator(log_file: Path, level: Optional[str] = None):
@@ -101,7 +111,7 @@ async def log_stream_generator(log_file: Path, level: Optional[str] = None):
 @router.get("/logs/stream")
 async def stream_logs(level: Optional[str] = None):
     """实时日志流 (SSE)."""
-    log_file = Path("logs/app.log")
+    log_file = Path("logs/agent.log")
     return StreamingResponse(
         log_stream_generator(log_file, level),
         media_type="text/event-stream"

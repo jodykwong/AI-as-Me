@@ -19,12 +19,17 @@ class StatsResponse(BaseModel):
 @router.get("/stats", response_model=StatsResponse)
 async def get_stats(days: int = Query(7, ge=1, le=365)):
     """获取系统统计数据."""
-    calculator = StatsCalculator()
-    stats = calculator.calculate_stats(days)
-    
-    return StatsResponse(
-        application_frequency=stats.get("application_frequency", {}),
-        effectiveness_scores=stats.get("effectiveness_scores", {}),
-        pattern_accuracy=stats.get("pattern_accuracy", 0.0),
-        time_range_days=days
-    )
+    try:
+        calculator = StatsCalculator()
+        stats = calculator.calculate_stats(days)
+        
+        return StatsResponse(
+            application_frequency=stats.get("application_frequency", {}),
+            effectiveness_scores=stats.get("effectiveness_scores", {}),
+            pattern_accuracy=stats.get("pattern_accuracy", 0.0),
+            time_range_days=days
+        )
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Evolution log not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Stats calculation failed: {str(e)}")

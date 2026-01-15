@@ -9,7 +9,7 @@ class LogQuery:
     """日志查询器."""
     
     def __init__(self, log_file: Path = None):
-        self.log_file = log_file or Path('logs/app.log')
+        self.log_file = log_file or Path('logs/agent.log')
     
     def query(
         self,

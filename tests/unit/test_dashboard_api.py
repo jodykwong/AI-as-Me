@@ -22,8 +22,16 @@ class TestInspirationAPI:
         assert isinstance(data, list)  # 直接返回列表
     
     def test_add_inspiration(self, client):
-        # POST 端点未实现，跳过
-        pytest.skip("POST /api/inspirations not implemented yet")
+        payload = {
+            "content": "测试灵感",
+            "priority": "medium",
+            "tags": ["test"]
+        }
+        response = client.post("/api/inspirations", json=payload)
+        assert response.status_code in [200, 201]
+        data = response.json()
+        assert "id" in data
+        assert data["status"] == "created"
 
 
 class TestRulesAPI:

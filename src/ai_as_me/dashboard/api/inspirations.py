@@ -20,6 +20,13 @@ class InspirationResponse(BaseModel):
     created_at: str
 
 
+class InspirationCreate(BaseModel):
+    """创建灵感请求模型."""
+    content: str
+    priority: str = "medium"
+    tags: List[str] = []
+
+
 @router.get("/inspirations", response_model=List[InspirationResponse])
 async def list_inspirations(
     status: Optional[str] = None,
@@ -42,6 +49,23 @@ async def list_inspirations(
         )
         for insp in inspirations
     ]
+
+
+@router.post("/inspirations")
+async def create_inspiration(data: InspirationCreate):
+    """创建新灵感."""
+    from ai_as_me.inspiration.models import Inspiration
+    pool = InspirationPool(Path("soul/inspiration"))
+    
+    insp = Inspiration(
+        content=data.content,
+        source="api",
+        priority=data.priority,
+        tags=data.tags
+    )
+    insp_id = pool.add(insp)
+    
+    return {"id": insp_id, "status": "created"}
 
 
 @router.get("/{inspiration_id}", response_model=InspirationResponse)
