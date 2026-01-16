@@ -5,6 +5,13 @@ from datetime import datetime
 from enum import Enum
 import re
 
+# 占位符常量
+PLACEHOLDER_PENDING = "[待澄清]"
+PLACEHOLDER_TOOL = "[待配置]"
+PLACEHOLDER_TIME = "[待评估]"
+PLACEHOLDER_NONE = "[无]"
+PLACEHOLDERS = {PLACEHOLDER_PENDING, PLACEHOLDER_TOOL, PLACEHOLDER_TIME, PLACEHOLDER_NONE}
+
 
 class TaskStatus(str, Enum):
     INBOX = "inbox"
@@ -56,19 +63,19 @@ clarified: {str(self.clarified).lower()}
 {self.description}
 
 ## 🎯 目标
-{self.clarification.goal or "[待澄清]"}
+{self.clarification.goal or PLACEHOLDER_PENDING}
 
 ## ✅ 验收标准
 {criteria}
 
 ## 🔧 工具选择
-{self.clarification.tool or "[待配置]"}
+{self.clarification.tool or PLACEHOLDER_TOOL}
 
 ## ⏱️ 时间估算
-{self.clarification.time_estimate or "[待评估]"}
+{self.clarification.time_estimate or PLACEHOLDER_TIME}
 
 ## 📎 上下文
-{self.clarification.context or "[无]"}
+{self.clarification.context or PLACEHOLDER_NONE}
 """
 
     @classmethod
@@ -88,7 +95,7 @@ clarified: {str(self.clarified).lower()}
             pattern = rf'## [^\n]*{name}[^\n]*\n(.*?)(?=\n## |\Z)'
             m = re.search(pattern, body, re.DOTALL)
             text = m.group(1).strip() if m else ""
-            return "" if text in ["[待澄清]", "[待配置]", "[待评估]", "[无]"] else text
+            return "" if text in PLACEHOLDERS else text
         
         title_match = re.search(r'^#\s+(.+)$', body, re.MULTILINE)
         criteria_text = get_section("验收标准")

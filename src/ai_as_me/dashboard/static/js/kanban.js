@@ -5,6 +5,8 @@ function kanbanApp() {
         newPriority: 'P2',
         showClarifyModal: false,
         currentTask: null,
+        loading: false,
+        error: '',
         clarifyForm: {
             goal: '',
             acceptance_criteria: [''],
@@ -17,19 +19,26 @@ function kanbanApp() {
         },
 
         async loadBoard() {
+            this.loading = true;
+            this.error = '';
             try {
                 const res = await fetch('/api/kanban/board');
+                if (!res.ok) throw new Error('加载看板失败');
                 this.board = await res.json();
             } catch (e) {
-                console.error('Failed to load board:', e);
+                this.error = e.message;
+            } finally {
+                this.loading = false;
             }
         },
 
         async createTask() {
             if (!this.newTask.trim()) return;
             
+            this.loading = true;
+            this.error = '';
             try {
-                await fetch('/api/kanban/tasks', {
+                const res = await fetch('/api/kanban/tasks', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -38,10 +47,17 @@ function kanbanApp() {
                     })
                 });
                 
+                if (!res.ok) {
+                    const data = await res.json();
+                    throw new Error(data.detail || '创建任务失败');
+                }
+                
                 this.newTask = '';
                 await this.loadBoard();
             } catch (e) {
-                alert('创建任务失败: ' + e.message);
+                this.error = e.message;
+            } finally {
+                this.loading = false;
             }
         },
 
@@ -60,18 +76,20 @@ function kanbanApp() {
 
         async submitClarify() {
             if (!this.clarifyForm.goal.trim()) {
-                alert('请填写目标');
+                this.error = '请填写目标';
                 return;
             }
 
             const criteria = this.clarifyForm.acceptance_criteria.filter(c => c.trim());
             if (criteria.length === 0) {
-                alert('请至少添加一条验收标准');
+                this.error = '请至少添加一条验收标准';
                 return;
             }
 
+            this.loading = true;
+            this.error = '';
             try {
-                await fetch(`/api/kanban/tasks/${this.currentTask.id}/clarify`, {
+                const res = await fetch(`/api/kanban/tasks/${this.currentTask.id}/clarify`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -82,27 +100,40 @@ function kanbanApp() {
                     })
                 });
 
+                if (!res.ok) throw new Error('澄清失败');
+
                 // 自动移动到 todo
                 await this.moveTask(this.currentTask.id, 'todo');
                 
                 this.showClarifyModal = false;
                 await this.loadBoard();
             } catch (e) {
-                alert('澄清失败: ' + e.message);
+                this.error = e.message;
+            } finally {
+                this.loading = false;
             }
         },
 
         async moveTask(taskId, toStatus) {
+            this.loading = true;
+            this.error = '';
             try {
-                await fetch(`/api/kanban/tasks/${taskId}/move`, {
+                const res = await fetch(`/api/kanban/tasks/${taskId}/move`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ to_status: toStatus })
                 });
                 
+                if (!res.ok) {
+                    const data = await res.json();
+                    throw new Error(data.detail || '移动任务失败');
+                }
+                
                 await this.loadBoard();
             } catch (e) {
-                alert('移动任务失败: ' + e.message);
+                this.error = e.message;
+            } finally {
+                this.loading = false;
             }
         },
 

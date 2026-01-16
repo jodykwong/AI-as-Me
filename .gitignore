@@ -1,47 +1,47 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
 
-# Testing
-.pytest_cache/
-.tox/
-htmlcov/
+*~
+*$py.class
+build/
+*.cover
 .coverage
 coverage.json
 coverage.xml
-*.cover
+data/*.db
+develop-eggs/
+dist/
+downloads/
+.DS_Store
+*.egg
+*.egg-info/
+.eggs/
+eggs/
+.env
+experience/successes/*.json
+htmlcov/
 .hypothesis/
-
-# Logs
+# IDE
+.idea/
+.installed.cfg
+lib/
+lib64/
 *.log
 logs/
-test_data/
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
+# Logs
 # OS
-.DS_Store
+parts/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+# Python
+.Python
+sdist/
+*.so
+*.swo
+*.swp
+test_data/
+# Testing
 Thumbs.db
+.tox/
+var/
+.vscode/
+wheels/

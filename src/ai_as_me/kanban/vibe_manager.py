@@ -2,6 +2,7 @@
 from pathlib import Path
 from typing import List, Optional
 from datetime import datetime
+import uuid
 from .models import Task, TaskStatus, TaskPriority, TaskClarification
 
 
@@ -15,10 +16,9 @@ class VibeKanbanManager:
             (self.kanban_dir / status.value).mkdir(parents=True, exist_ok=True)
     
     def _generate_id(self) -> str:
+        """生成唯一任务 ID（使用 UUID 避免竞态条件）."""
         now = datetime.now()
-        existing = list(self.kanban_dir.rglob("task-*.md"))
-        count = len(existing) + 1
-        return f"task-{now.strftime('%Y%m%d')}-{count:03d}"
+        return f"task-{now.strftime('%Y%m%d')}-{uuid.uuid4().hex[:6]}"
     
     def _get_file_path(self, task_id: str, status: TaskStatus) -> Path:
         return self.kanban_dir / status.value / f"{task_id}.md"
@@ -31,15 +31,24 @@ class VibeKanbanManager:
         return None
     
     def create_task(self, description: str, priority: str = "P2") -> Task:
+        """创建新任务到 inbox."""
+        if not description or not description.strip():
+            raise ValueError("Task description cannot be empty")
+        
+        try:
+            priority_enum = TaskPriority(priority)
+        except ValueError:
+            priority_enum = TaskPriority.P2
+        
         task_id = self._generate_id()
         title = description[:50] + ("..." if len(description) > 50 else "")
         
         task = Task(
             id=task_id,
             title=title,
-            description=description,
+            description=description.strip(),
             status=TaskStatus.INBOX,
-            priority=TaskPriority(priority),
+            priority=priority_enum,
             clarified=False
         )
         
