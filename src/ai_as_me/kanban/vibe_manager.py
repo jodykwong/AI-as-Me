@@ -84,14 +84,25 @@ class VibeKanbanManager:
         return sorted(tasks, key=lambda t: t.created_at, reverse=True)
     
     def clarify_task(self, task_id: str, clarification: dict) -> Task:
+        """澄清任务并自动移动到todo."""
         task = self.get_task(task_id)
         
         task.clarification = TaskClarification(**clarification)
         task.clarified = True
         task.updated_at = datetime.now()
         
-        file_path = self._find_task_file(task_id)
-        file_path.write_text(task.to_markdown(), encoding='utf-8')
+        # 如果任务在inbox，澄清后自动移到todo
+        if task.status == TaskStatus.INBOX:
+            old_file = self._find_task_file(task_id)
+            task.status = TaskStatus.TODO
+            new_file = self._get_file_path(task_id, TaskStatus.TODO)
+            
+            new_file.write_text(task.to_markdown(), encoding='utf-8')
+            old_file.unlink()
+        else:
+            # 如果不在inbox，只更新文件
+            file_path = self._find_task_file(task_id)
+            file_path.write_text(task.to_markdown(), encoding='utf-8')
         
         return task
     
