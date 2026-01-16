@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soul 状态 - AI-as-Me</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://unpkg.com/alpinejs@3.13.3" defer></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="bg-gray-50">
+    <nav class="navbar bg-white shadow">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <h1 class="text-xl font-bold">🧠 Soul 状态</h1>
+            <div class="nav-links space-x-4">
+                <a href="/" class="text-blue-600 hover:underline">首页</a>
+                <a href="/kanban.html" class="text-gray-600 hover:underline">Kanban</a>
+                <a href="/inspirations.html" class="text-gray-600 hover:underline">灵感池</a>
+                <a href="/rules.html" class="text-gray-600 hover:underline">规则</a>
+                <a href="/stats.html" class="text-gray-600 hover:underline">统计</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-4 py-6" x-data="soulApp()">
+        <div class="space-y-6">
+            <!-- Profile -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-lg font-bold mb-4 flex items-center">
+                    <span class="text-2xl mr-2">👤</span> Profile
+                </h2>
+                <div class="prose max-w-none">
+                    <pre class="whitespace-pre-wrap text-sm" x-text="soul.profile"></pre>
+                </div>
+            </div>
+
+            <!-- Mission -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-lg font-bold mb-4 flex items-center">
+                    <span class="text-2xl mr-2">🎯</span> Mission
+                </h2>
+                <div class="prose max-w-none">
+                    <pre class="whitespace-pre-wrap text-sm" x-text="soul.mission"></pre>
+                </div>
+            </div>
+
+            <!-- 规则统计 -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-lg font-bold mb-4 flex items-center">
+                    <span class="text-2xl mr-2">📜</span> 规则统计
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-blue-50 rounded p-4 text-center">
+                        <div class="text-3xl font-bold text-blue-600" x-text="soul.rules.core"></div>
+                        <div class="text-sm text-gray-600 mt-1">Core Rules</div>
+                    </div>
+                    <div class="bg-green-50 rounded p-4 text-center">
+                        <div class="text-3xl font-bold text-green-600" x-text="soul.rules.learned"></div>
+                        <div class="text-sm text-gray-600 mt-1">Learned Rules</div>
+                    </div>
+                    <div class="bg-purple-50 rounded p-4 text-center">
+                        <div class="text-3xl font-bold text-purple-600" x-text="soul.rules.total"></div>
+                        <div class="text-sm text-gray-600 mt-1">总计</div>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <a href="/rules.html" class="text-blue-600 hover:underline text-sm">查看详细规则 →</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function soulApp() {
+            return {
+                soul: {
+                    profile: '加载中...',
+                    mission: '加载中...',
+                    rules: { core: 0, learned: 0, total: 0 }
+                },
+
+                async init() {
+                    await this.loadSoul();
+                },
+
+                async loadSoul() {
+                    try {
+                        const res = await fetch('/api/soul/status');
+                        this.soul = await res.json();
+                    } catch (e) {
+                        console.error('Failed to load soul:', e);
+                    }
+                }
+            };
+        }
+    </script>
+</body>
+</html>

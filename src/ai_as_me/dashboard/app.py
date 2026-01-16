@@ -23,8 +23,10 @@ app.add_middleware(
 )
 
 # 注册 API 路由（顺序很重要！）
-from .api import inspirations, rules, stats, logs
+from .api import inspirations, rules, stats, logs, kanban, soul
 
+app.include_router(kanban.router, prefix="/api", tags=["kanban"])
+app.include_router(soul.router, prefix="/api", tags=["soul"])
 app.include_router(rules.router, prefix="/api", tags=["rules"])
 app.include_router(stats.router, prefix="/api", tags=["stats"])
 app.include_router(logs.router, prefix="/api", tags=["logs"])
@@ -64,6 +66,18 @@ async def rules_page():
 async def stats_page():
     """统计图表页面."""
     return FileResponse(static_dir / "stats.html")
+
+
+@app.get("/soul.html")
+async def soul_page():
+    """Soul 状态页面."""
+    return FileResponse(static_dir / "soul.html")
+
+
+@app.get("/kanban.html")
+async def kanban_page():
+    """Kanban 看板页面."""
+    return FileResponse(static_dir / "kanban.html")
 
 
 @app.get("/logs.html")

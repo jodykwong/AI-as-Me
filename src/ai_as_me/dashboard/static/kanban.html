@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kanban 看板 - AI-as-Me</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://unpkg.com/alpinejs@3.13.3" defer></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="bg-gray-50">
+    <nav class="navbar bg-white shadow">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <h1 class="text-xl font-bold">📋 Kanban 看板</h1>
+            <div class="nav-links space-x-4">
+                <a href="/" class="text-blue-600 hover:underline">首页</a>
+                <a href="/inspirations.html" class="text-gray-600 hover:underline">灵感池</a>
+                <a href="/rules.html" class="text-gray-600 hover:underline">规则</a>
+                <a href="/soul.html" class="text-gray-600 hover:underline">Soul</a>
+                <a href="/stats.html" class="text-gray-600 hover:underline">统计</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-4 py-6" x-data="kanbanApp()">
+        <!-- 创建任务 -->
+        <div class="mb-6 bg-white p-4 rounded shadow">
+            <div class="flex gap-2">
+                <input type="text" x-model="newTask" @keyup.enter="createTask()" 
+                       placeholder="输入任务描述..." 
+                       class="flex-1 px-4 py-2 border rounded">
+                <select x-model="newPriority" class="px-4 py-2 border rounded">
+                    <option value="P1">P1 高</option>
+                    <option value="P2" selected>P2 中</option>
+                    <option value="P3">P3 低</option>
+                </select>
+                <button @click="createTask()" class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                    + 创建任务
+                </button>
+            </div>
+        </div>
+
+        <!-- 看板 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Inbox -->
+            <div class="bg-white rounded shadow">
+                <div class="bg-purple-600 text-white px-4 py-3 rounded-t">
+                    <h2 class="font-bold">📥 Inbox <span x-text="board.inbox.length"></span></h2>
+                </div>
+                <div class="p-4 space-y-3 min-h-[400px]">
+                    <template x-for="task in board.inbox" :key="task.id">
+                        <div class="border rounded p-3 hover:shadow cursor-pointer" @click="showTask(task)">
+                            <div class="font-medium text-sm mb-2" x-text="task.title"></div>
+                            <div class="flex justify-between items-center text-xs">
+                                <span :class="getPriorityClass(task.priority)" x-text="task.priority"></span>
+                                <span class="text-orange-600">⚠️ 待澄清</span>
+                            </div>
+                            <button @click.stop="clarifyTask(task)" 
+                                    class="mt-2 w-full px-3 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700">
+                                澄清
+                            </button>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Todo -->
+            <div class="bg-white rounded shadow">
+                <div class="bg-blue-600 text-white px-4 py-3 rounded-t">
+                    <h2 class="font-bold">📝 Todo <span x-text="board.todo.length"></span></h2>
+                </div>
+                <div class="p-4 space-y-3 min-h-[400px]">
+                    <template x-for="task in board.todo" :key="task.id">
+                        <div class="border rounded p-3 hover:shadow cursor-pointer" @click="showTask(task)">
+                            <div class="font-medium text-sm mb-2" x-text="task.title"></div>
+                            <div class="flex justify-between items-center text-xs mb-2">
+                                <span :class="getPriorityClass(task.priority)" x-text="task.priority"></span>
+                            </div>
+                            <button @click.stop="moveTask(task.id, 'doing')" 
+                                    class="w-full px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700">
+                                开始
+                            </button>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Doing -->
+            <div class="bg-white rounded shadow">
+                <div class="bg-orange-600 text-white px-4 py-3 rounded-t">
+                    <h2 class="font-bold">🔄 Doing <span x-text="board.doing.length"></span></h2>
+                </div>
+                <div class="p-4 space-y-3 min-h-[400px]">
+                    <template x-for="task in board.doing" :key="task.id">
+                        <div class="border rounded p-3 hover:shadow cursor-pointer" @click="showTask(task)">
+                            <div class="font-medium text-sm mb-2" x-text="task.title"></div>
+                            <div class="flex justify-between items-center text-xs mb-2">
+                                <span :class="getPriorityClass(task.priority)" x-text="task.priority"></span>
+                            </div>
+                            <button @click.stop="moveTask(task.id, 'done')" 
+                                    class="w-full px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700">
+                                完成
+                            </button>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Done -->
+            <div class="bg-white rounded shadow">
+                <div class="bg-green-600 text-white px-4 py-3 rounded-t">
+                    <h2 class="font-bold">✅ Done <span x-text="board.done.length"></span></h2>
+                </div>
+                <div class="p-4 space-y-3 min-h-[400px]">
+                    <template x-for="task in board.done" :key="task.id">
+                        <div class="border rounded p-3 bg-gray-50">
+                            <div class="font-medium text-sm text-gray-600" x-text="'✓ ' + task.title"></div>
+                            <div class="text-xs text-gray-500 mt-1" x-text="task.priority"></div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <!-- 澄清弹窗 -->
+        <div x-show="showClarifyModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" 
+             @click.self="showClarifyModal = false">
+            <div class="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold">📝 澄清任务</h3>
+                    <button @click="showClarifyModal = false" class="text-gray-500 hover:text-gray-700">✕</button>
+                </div>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">🎯 目标 *</label>
+                        <textarea x-model="clarifyForm.goal" rows="2" 
+                                  class="w-full px-3 py-2 border rounded" 
+                                  placeholder="明确任务要达成的目标"></textarea>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-1">✅ 验收标准 *</label>
+                        <template x-for="(criterion, index) in clarifyForm.acceptance_criteria" :key="index">
+                            <div class="flex gap-2 mb-2">
+                                <input type="text" x-model="clarifyForm.acceptance_criteria[index]" 
+                                       class="flex-1 px-3 py-2 border rounded" 
+                                       placeholder="验收标准">
+                                <button @click="clarifyForm.acceptance_criteria.splice(index, 1)" 
+                                        class="px-3 py-2 text-red-600 hover:bg-red-50 rounded">删除</button>
+                            </div>
+                        </template>
+                        <button @click="clarifyForm.acceptance_criteria.push('')" 
+                                class="text-sm text-blue-600 hover:underline">+ 添加标准</button>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-1">🔧 工具选择</label>
+                        <input type="text" x-model="clarifyForm.tool" 
+                               class="w-full px-3 py-2 border rounded" 
+                               placeholder="Claude Code, OpenCode, etc.">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-1">⏱️ 时间估算</label>
+                        <input type="text" x-model="clarifyForm.time_estimate" 
+                               class="w-full px-3 py-2 border rounded" 
+                               placeholder="2小时, 1天, etc.">
+                    </div>
+                    
+                    <div class="flex gap-2 pt-4">
+                        <button @click="showClarifyModal = false" 
+                                class="flex-1 px-4 py-2 border rounded hover:bg-gray-50">取消</button>
+                        <button @click="submitClarify()" 
+                                class="flex-1 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">
+                                确认并移至 Todo
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/static/js/kanban.js"></script>
+</body>
+</html>

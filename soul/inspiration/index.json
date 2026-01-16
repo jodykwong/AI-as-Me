@@ -1,11 +1,11 @@
 {
-  "total": 8,
+  "total": 16,
   "by_status": {
-    "incubating": 8
+    "incubating": 16
   },
   "by_source": {
     "manual": 2,
-    "api": 6
+    "api": 14
   },
-  "last_updated": "2026-01-16T05:24:48.939059"
+  "last_updated": "2026-01-17T06:28:05.836598"
 }

@@ -6,36 +6,187 @@
     <title>AI-as-Me Dashboard</title>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="https://unpkg.com/alpinejs@3.13.3" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
-<body>
-    <nav class="navbar">
-        <h1>AI-as-Me Dashboard v3.4</h1>
-        <div class="nav-links">
-            <a href="/">首页</a>
-            <a href="/inspirations.html">灵感池</a>
-            <a href="/rules.html">规则管理</a>
-            <a href="/stats.html">统计</a>
-            <a href="/logs.html">日志</a>
+<body class="bg-gray-50">
+    <nav class="navbar bg-white shadow">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <h1 class="text-2xl font-bold">🧠 AI-as-Me Dashboard v3.4.3</h1>
+            <div class="nav-links space-x-4">
+                <a href="/" class="text-blue-600 hover:underline font-medium">首页</a>
+                <a href="/kanban.html" class="text-gray-600 hover:underline">Kanban</a>
+                <a href="/inspirations.html" class="text-gray-600 hover:underline">灵感池</a>
+                <a href="/rules.html" class="text-gray-600 hover:underline">规则</a>
+                <a href="/soul.html" class="text-gray-600 hover:underline">Soul</a>
+                <a href="/stats.html" class="text-gray-600 hover:underline">统计</a>
+                <a href="/logs.html" class="text-gray-600 hover:underline">日志</a>
+            </div>
         </div>
     </nav>
 
-    <main class="container" x-data="dashboard()">
-        <section class="stats-cards">
-            <div class="card" hx-get="/api/stats" hx-trigger="load, every 10s" hx-target="#stats-content">
-                <div id="stats-content">加载中...</div>
+    <main class="container mx-auto px-4 py-6" x-data="dashboard()">
+        <!-- 系统概览 -->
+        <section class="mb-8">
+            <h2 class="text-xl font-bold mb-4">📊 系统概览</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-gray-600 text-sm">任务总数</div>
+                            <div class="text-3xl font-bold text-blue-600" x-text="stats.tasks"></div>
+                        </div>
+                        <div class="text-4xl">📋</div>
+                    </div>
+                    <div class="mt-2 text-xs text-gray-500">
+                        <span>Inbox: <span x-text="stats.inbox"></span></span>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-gray-600 text-sm">灵感池</div>
+                            <div class="text-3xl font-bold text-purple-600" x-text="stats.inspirations"></div>
+                        </div>
+                        <div class="text-4xl">💡</div>
+                    </div>
+                    <div class="mt-2 text-xs text-gray-500">待孵化</div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-gray-600 text-sm">规则数量</div>
+                            <div class="text-3xl font-bold text-green-600" x-text="stats.rules"></div>
+                        </div>
+                        <div class="text-4xl">📜</div>
+                    </div>
+                    <div class="mt-2 text-xs text-gray-500">
+                        <span>Core: <span x-text="stats.coreRules"></span> | Learned: <span x-text="stats.learnedRules"></span></span>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-gray-600 text-sm">系统状态</div>
+                            <div class="text-3xl font-bold text-green-600">✓</div>
+                        </div>
+                        <div class="text-4xl">🚀</div>
+                    </div>
+                    <div class="mt-2 text-xs text-gray-500">运行正常</div>
+                </div>
             </div>
         </section>
 
-        <section class="recent-events">
-            <h2>最近事件</h2>
-            <div hx-get="/api/logs/stream" hx-trigger="load" hx-swap="beforeend" hx-ext="sse">
-                <div id="events-list"></div>
+        <!-- 快速操作 -->
+        <section class="mb-8">
+            <h2 class="text-xl font-bold mb-4">⚡ 快速操作</h2>
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex flex-wrap gap-3">
+                    <a href="/kanban.html" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                        + 创建任务
+                    </a>
+                    <a href="/inspirations.html" class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
+                        + 添加灵感
+                    </a>
+                    <a href="/stats.html" class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+                        📊 查看统计
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- 功能模块 -->
+        <section>
+            <h2 class="text-xl font-bold mb-4">🔗 功能模块</h2>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <a href="/kanban.html" class="bg-white rounded-lg shadow p-6 text-center hover:shadow-lg transition">
+                    <div class="text-4xl mb-2">📋</div>
+                    <div class="font-medium">Kanban</div>
+                    <div class="text-xs text-gray-500 mt-1">任务看板</div>
+                </a>
+
+                <a href="/inspirations.html" class="bg-white rounded-lg shadow p-6 text-center hover:shadow-lg transition">
+                    <div class="text-4xl mb-2">💡</div>
+                    <div class="font-medium">灵感池</div>
+                    <div class="text-xs text-gray-500 mt-1">想法收集</div>
+                </a>
+
+                <a href="/rules.html" class="bg-white rounded-lg shadow p-6 text-center hover:shadow-lg transition">
+                    <div class="text-4xl mb-2">📜</div>
+                    <div class="font-medium">规则</div>
+                    <div class="text-xs text-gray-500 mt-1">规则管理</div>
+                </a>
+
+                <a href="/soul.html" class="bg-white rounded-lg shadow p-6 text-center hover:shadow-lg transition">
+                    <div class="text-4xl mb-2">🧠</div>
+                    <div class="font-medium">Soul</div>
+                    <div class="text-xs text-gray-500 mt-1">AI 状态</div>
+                </a>
+
+                <a href="/stats.html" class="bg-white rounded-lg shadow p-6 text-center hover:shadow-lg transition">
+                    <div class="text-4xl mb-2">📊</div>
+                    <div class="font-medium">统计</div>
+                    <div class="text-xs text-gray-500 mt-1">数据分析</div>
+                </a>
+
+                <a href="/logs.html" class="bg-white rounded-lg shadow p-6 text-center hover:shadow-lg transition">
+                    <div class="text-4xl mb-2">📝</div>
+                    <div class="font-medium">日志</div>
+                    <div class="text-xs text-gray-500 mt-1">系统日志</div>
+                </a>
             </div>
         </section>
     </main>
 
-    <script src="/static/js/dashboard.js"></script>
+    <script>
+        function dashboard() {
+            return {
+                stats: {
+                    tasks: 0,
+                    inbox: 0,
+                    inspirations: 0,
+                    rules: 0,
+                    coreRules: 0,
+                    learnedRules: 0
+                },
+
+                async init() {
+                    await this.loadStats();
+                },
+
+                async loadStats() {
+                    try {
+                        // 加载任务统计
+                        const boardRes = await fetch('/api/kanban/board');
+                        const board = await boardRes.json();
+                        this.stats.inbox = board.inbox.length;
+                        this.stats.tasks = board.inbox.length + board.todo.length + 
+                                          board.doing.length + board.done.length;
+
+                        // 加载 Soul 统计
+                        const soulRes = await fetch('/api/soul/status');
+                        const soul = await soulRes.json();
+                        this.stats.rules = soul.rules.total;
+                        this.stats.coreRules = soul.rules.core;
+                        this.stats.learnedRules = soul.rules.learned;
+
+                        // 灵感池（如果 API 可用）
+                        try {
+                            const inspRes = await fetch('/api/inspirations');
+                            const inspirations = await inspRes.json();
+                            this.stats.inspirations = inspirations.length || 0;
+                        } catch (e) {
+                            this.stats.inspirations = 0;
+                        }
+                    } catch (e) {
+                        console.error('Failed to load stats:', e);
+                    }
+                }
+            };
+        }
+    </script>
 </body>
 </html>
