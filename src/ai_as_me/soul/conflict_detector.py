@@ -69,16 +69,17 @@ class ConflictDetector:
         """检测直接矛盾."""
         # 关键词匹配：禁止 vs 使用
         forbidden_patterns = [
-            (r'禁止.*?(\w+)', r'使用.*?\1'),
-            (r'不要.*?(\w+)', r'应该.*?\1'),
-            (r'避免.*?(\w+)', r'优先.*?\1'),
+            (r'禁止[^\n]*?(\S+)', r'使用[^\n]*?\1'),
+            (r'不要[^\n]*?(\S+)', r'应该[^\n]*?\1'),
+            (r'避免[^\n]*?(\S+)', r'优先[^\n]*?\1'),
         ]
         
         for forbid_pattern, use_pattern in forbidden_patterns:
             forbid_match = re.search(forbid_pattern, core_content)
             if forbid_match:
                 target = forbid_match.group(1)
-                if re.search(use_pattern.replace(r'\1', target), learned_content):
+                # 直接检查 learned 是否包含相同目标词
+                if target in learned_content and re.search(r'使用|应该|优先', learned_content):
                     return Conflict(
                         conflict_type="contradiction",
                         core_rule=core_file,

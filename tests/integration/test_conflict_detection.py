@@ -36,6 +36,9 @@ async def test_auto_resolve(temp_soul_dir, tmp_path):
     detector = ConflictDetector(temp_soul_dir)
     conflicts = await detector.scan()
     
+    # 确保有冲突
+    assert len(conflicts) > 0, "No conflicts detected"
+    
     log_file = tmp_path / "conflicts.jsonl"
     resolver = ConflictResolver(log_file)
     

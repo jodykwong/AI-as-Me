@@ -33,8 +33,16 @@ class PatternRecognizer:
     
     def recognize(self, experiences: list) -> list[Pattern]:
         """从经验中识别模式"""
-        if len(experiences) < 3:
+        # 允许单个经验也能识别模式（用于 demo）
+        if not experiences:
             return []
+        
+        # 无 LLM 时使用简单规则识别
+        if self.llm is None:
+            return self._recognize_simple(experiences)
+        
+        if len(experiences) < 3:
+            return self._recognize_simple(experiences)
         
         prompt = self._build_prompt(experiences)
         
@@ -54,7 +62,37 @@ class PatternRecognizer:
             return patterns
         except Exception as e:
             print(f"Pattern recognition failed: {e}")
+            return self._recognize_simple(experiences)
+    
+    def _recognize_simple(self, experiences: list) -> list[Pattern]:
+        """简单规则识别（无需 LLM）"""
+        if not experiences:
             return []
+        
+        # 按工具分组
+        tool_groups = {}
+        for exp in experiences:
+            tool = getattr(exp, 'tool_used', 'unknown')
+            if tool not in tool_groups:
+                tool_groups[tool] = []
+            tool_groups[tool].append(exp)
+        
+        patterns = []
+        for tool, exps in tool_groups.items():
+            success_count = sum(1 for e in exps if getattr(e, 'success', False))
+            confidence = success_count / len(exps) if exps else 0
+            
+            pattern = Pattern(
+                pattern_id=f"pattern-{tool}-{len(patterns)+1}",
+                description=f"使用 {tool} 处理相关任务",
+                frequency=len(exps),
+                source_tasks=[getattr(e, 'task_id', str(i)) for i, e in enumerate(exps)],
+                confidence=max(0.7, confidence),
+                category="tool_usage"
+            )
+            patterns.append(pattern)
+        
+        return patterns
     
     def _build_prompt(self, experiences: list) -> str:
         exp_summaries = []

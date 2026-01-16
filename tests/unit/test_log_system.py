@@ -66,9 +66,9 @@ def test_setup_logging(temp_log_dir):
     for handler in root.handlers:
         if isinstance(handler, logging.FileHandler):
             handler.emit(record)
-            handler.close()
+            handler.flush()
     
-    log_file = temp_log_dir / "app.log"
+    log_file = temp_log_dir / "agent.log"
     assert log_file.exists()
     
     content = log_file.read_text()

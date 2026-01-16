@@ -5,7 +5,13 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pathlib import Path
 
-app = FastAPI(title="AI-as-Me Dashboard", version="3.4.0")
+app = FastAPI(
+    title="AI-as-Me Dashboard",
+    version="3.4.2",
+    description="AI-as-Me 灵感管理与规则配置 Dashboard API",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc"
+)
 
 # CORS
 app.add_middleware(
