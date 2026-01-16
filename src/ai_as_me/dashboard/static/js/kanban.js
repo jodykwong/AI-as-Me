@@ -4,6 +4,7 @@ function kanbanApp() {
         newTask: '',
         newPriority: 'P2',
         showClarifyModal: false,
+        showCelebration: false,
         currentTask: null,
         loading: false,
         error: '',
@@ -101,9 +102,6 @@ function kanbanApp() {
                 });
 
                 if (!res.ok) throw new Error('澄清失败');
-
-                // 自动移动到 todo
-                await this.moveTask(this.currentTask.id, 'todo');
                 
                 this.showClarifyModal = false;
                 await this.loadBoard();
@@ -129,12 +127,24 @@ function kanbanApp() {
                     throw new Error(data.detail || '移动任务失败');
                 }
                 
+                // 如果移动到done，显示庆祝动画
+                if (toStatus === 'done') {
+                    this.celebrate();
+                }
+                
                 await this.loadBoard();
             } catch (e) {
                 this.error = e.message;
             } finally {
                 this.loading = false;
             }
+        },
+
+        celebrate() {
+            this.showCelebration = true;
+            setTimeout(() => {
+                this.showCelebration = false;
+            }, 2000);
         },
 
         showTask(task) {
@@ -149,6 +159,15 @@ function kanbanApp() {
                 'P3': 'text-gray-600'
             };
             return classes[priority] || '';
+        },
+
+        getPriorityBadge(priority) {
+            const badges = {
+                'P1': 'bg-red-100 text-red-800 border border-red-300',
+                'P2': 'bg-orange-100 text-orange-800 border border-orange-300',
+                'P3': 'bg-gray-100 text-gray-800 border border-gray-300'
+            };
+            return badges[priority] || '';
         }
     };
 }

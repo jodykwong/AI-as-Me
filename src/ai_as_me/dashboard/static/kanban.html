@@ -64,15 +64,17 @@
                 </div>
                 <div class="p-4 space-y-3 min-h-[400px]">
                     <template x-for="task in board.inbox" :key="task.id">
-                        <div class="border rounded p-3 hover:shadow cursor-pointer" @click="showTask(task)">
-                            <div class="font-medium text-sm mb-2" x-text="task.title"></div>
-                            <div class="flex justify-between items-center text-xs">
-                                <span :class="getPriorityClass(task.priority)" x-text="task.priority"></span>
-                                <span class="text-orange-600">⚠️ 待澄清</span>
+                        <div class="border rounded p-3 hover:shadow cursor-pointer transition-shadow" @click="showTask(task)">
+                            <div class="flex items-start gap-2 mb-2">
+                                <span :class="getPriorityBadge(task.priority)" class="text-xs font-bold px-2 py-1 rounded" x-text="task.priority"></span>
+                                <div class="font-medium text-sm flex-1" x-text="task.title"></div>
+                            </div>
+                            <div class="flex justify-end items-center text-xs">
+                                <span class="text-orange-600 font-medium">⚠️ 待澄清</span>
                             </div>
                             <button @click.stop="clarifyTask(task)" 
-                                    class="mt-2 w-full px-3 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700">
-                                澄清
+                                    class="mt-2 w-full px-3 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700 transition-colors">
+                                💡 澄清任务
                             </button>
                         </div>
                     </template>
@@ -86,14 +88,14 @@
                 </div>
                 <div class="p-4 space-y-3 min-h-[400px]">
                     <template x-for="task in board.todo" :key="task.id">
-                        <div class="border rounded p-3 hover:shadow cursor-pointer" @click="showTask(task)">
-                            <div class="font-medium text-sm mb-2" x-text="task.title"></div>
-                            <div class="flex justify-between items-center text-xs mb-2">
-                                <span :class="getPriorityClass(task.priority)" x-text="task.priority"></span>
+                        <div class="border rounded p-3 hover:shadow cursor-pointer transition-shadow" @click="showTask(task)">
+                            <div class="flex items-start gap-2 mb-2">
+                                <span :class="getPriorityBadge(task.priority)" class="text-xs font-bold px-2 py-1 rounded" x-text="task.priority"></span>
+                                <div class="font-medium text-sm flex-1" x-text="task.title"></div>
                             </div>
                             <button @click.stop="moveTask(task.id, 'doing')" 
-                                    class="w-full px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700">
-                                开始
+                                    class="w-full px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors mt-2">
+                                🚀 开始
                             </button>
                         </div>
                     </template>
@@ -107,14 +109,14 @@
                 </div>
                 <div class="p-4 space-y-3 min-h-[400px]">
                     <template x-for="task in board.doing" :key="task.id">
-                        <div class="border rounded p-3 hover:shadow cursor-pointer" @click="showTask(task)">
-                            <div class="font-medium text-sm mb-2" x-text="task.title"></div>
-                            <div class="flex justify-between items-center text-xs mb-2">
-                                <span :class="getPriorityClass(task.priority)" x-text="task.priority"></span>
+                        <div class="border-2 border-orange-300 rounded p-3 hover:shadow cursor-pointer transition-shadow bg-orange-50" @click="showTask(task)">
+                            <div class="flex items-start gap-2 mb-2">
+                                <span :class="getPriorityBadge(task.priority)" class="text-xs font-bold px-2 py-1 rounded" x-text="task.priority"></span>
+                                <div class="font-medium text-sm flex-1" x-text="task.title"></div>
                             </div>
                             <button @click.stop="moveTask(task.id, 'done')" 
-                                    class="w-full px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700">
-                                完成
+                                    class="w-full px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors mt-2 font-medium">
+                                ✅ 完成
                             </button>
                         </div>
                     </template>
@@ -146,52 +148,77 @@
                     <button @click="showClarifyModal = false" class="text-gray-500 hover:text-gray-700">✕</button>
                 </div>
                 
+                <!-- 引导提示 -->
+                <div class="mb-4 bg-blue-50 border-l-4 border-blue-500 p-4 text-sm">
+                    <p class="font-medium text-blue-900 mb-2">💡 澄清任务的目的</p>
+                    <p class="text-blue-800">明确任务的目标和验收标准，确保执行时方向清晰。澄清后任务会自动移到 Todo 列表。</p>
+                </div>
+                
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium mb-1">🎯 目标 *</label>
+                        <label class="block text-sm font-medium mb-1">🎯 目标 * <span class="text-gray-500 font-normal">（这个任务要达成什么？）</span></label>
                         <textarea x-model="clarifyForm.goal" rows="2" 
-                                  class="w-full px-3 py-2 border rounded" 
-                                  placeholder="明确任务要达成的目标"></textarea>
+                                  class="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-purple-500" 
+                                  placeholder="示例：实现用户登录功能，支持邮箱和密码认证"></textarea>
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-medium mb-1">✅ 验收标准 *</label>
+                        <label class="block text-sm font-medium mb-1">✅ 验收标准 * <span class="text-gray-500 font-normal">（怎么算完成？）</span></label>
+                        <div class="mb-2 text-xs text-gray-600 bg-gray-50 p-2 rounded">
+                            <strong>示例：</strong>
+                            <ul class="list-disc list-inside mt-1">
+                                <li>用户可以输入邮箱和密码登录</li>
+                                <li>登录失败显示错误提示</li>
+                                <li>登录成功跳转到首页</li>
+                            </ul>
+                        </div>
                         <template x-for="(criterion, index) in clarifyForm.acceptance_criteria" :key="index">
                             <div class="flex gap-2 mb-2">
                                 <input type="text" x-model="clarifyForm.acceptance_criteria[index]" 
-                                       class="flex-1 px-3 py-2 border rounded" 
-                                       placeholder="验收标准">
+                                       class="flex-1 px-3 py-2 border rounded focus:ring-2 focus:ring-purple-500" 
+                                       :placeholder="'验收标准 ' + (index + 1)">
                                 <button @click="clarifyForm.acceptance_criteria.splice(index, 1)" 
                                         class="px-3 py-2 text-red-600 hover:bg-red-50 rounded">删除</button>
                             </div>
                         </template>
                         <button @click="clarifyForm.acceptance_criteria.push('')" 
                                 class="text-sm text-blue-600 hover:underline">+ 添加标准</button>
+                        <p class="text-xs text-gray-500 mt-1">至少需要1条验收标准</p>
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-medium mb-1">🔧 工具选择</label>
+                        <label class="block text-sm font-medium mb-1">🔧 工具选择 <span class="text-gray-500 font-normal">（可选）</span></label>
                         <input type="text" x-model="clarifyForm.tool" 
-                               class="w-full px-3 py-2 border rounded" 
-                               placeholder="Claude Code, OpenCode, etc.">
+                               class="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-purple-500" 
+                               placeholder="示例：Claude Code, OpenCode, 手动编码">
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-medium mb-1">⏱️ 时间估算</label>
+                        <label class="block text-sm font-medium mb-1">⏱️ 时间估算 <span class="text-gray-500 font-normal">（可选）</span></label>
                         <input type="text" x-model="clarifyForm.time_estimate" 
-                               class="w-full px-3 py-2 border rounded" 
-                               placeholder="2小时, 1天, etc.">
+                               class="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-purple-500" 
+                               placeholder="示例：2小时, 半天, 1天">
                     </div>
                     
                     <div class="flex gap-2 pt-4">
                         <button @click="showClarifyModal = false" 
                                 class="flex-1 px-4 py-2 border rounded hover:bg-gray-50">取消</button>
                         <button @click="submitClarify()" 
-                                class="flex-1 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">
-                                确认并移至 Todo
+                                class="flex-1 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 font-medium">
+                                ✨ 确认并移至 Todo
                         </button>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- 完成庆祝动画 -->
+        <div x-show="showCelebration" x-transition 
+             class="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+            <div class="bg-white rounded-lg shadow-2xl p-8 text-center animate-bounce">
+                <div class="text-6xl mb-4">🎉</div>
+                <div class="text-2xl font-bold text-green-600">任务完成！</div>
+                <div class="text-gray-600 mt-2">又完成一个任务，继续加油！</div>
             </div>
         </div>
     </main>
