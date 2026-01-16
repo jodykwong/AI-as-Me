@@ -341,7 +341,7 @@ def serve(port: int, host: str):
     
     try:
         import uvicorn
-        from ai_as_me.kanban.api import app
+        from ai_as_me.dashboard.app import app
         
         uvicorn.run(
             app,
