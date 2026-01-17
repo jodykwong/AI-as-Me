@@ -16,7 +16,22 @@ def main():
     
     # 初始化LLM和Soul
     try:
-        llm_client = LLMClient()
+        import os
+        from dotenv import load_dotenv
+        
+        # 加载环境变量
+        load_dotenv()
+        
+        api_key = os.getenv("DEEPSEEK_API_KEY")
+        base_url = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
+        model = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+        
+        if not api_key:
+            print("❌ 错误: 未找到 DEEPSEEK_API_KEY 环境变量")
+            print("   请在 .env 文件中配置 API 密钥")
+            sys.exit(1)
+        
+        llm_client = LLMClient(api_key=api_key, base_url=base_url, model=model)
         soul_context = load_soul_context(Path("soul"))
         print("✅ LLM Client 和 Soul Context 已加载")
     except Exception as e:
