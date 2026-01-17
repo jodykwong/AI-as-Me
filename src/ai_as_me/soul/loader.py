@@ -3,6 +3,19 @@ from pathlib import Path
 from typing import Dict, Optional
 
 
+def load_soul_context(soul_dir: Path) -> Optional[str]:
+    """快速加载Soul上下文的便捷函数.
+    
+    Args:
+        soul_dir: Soul目录路径
+        
+    Returns:
+        合并的Soul上下文字符串，如果没有文件则返回None
+    """
+    loader = SoulLoader(soul_dir)
+    return loader.load_all()
+
+
 class SoulLoader:
     """Load and manage soul files."""
     
