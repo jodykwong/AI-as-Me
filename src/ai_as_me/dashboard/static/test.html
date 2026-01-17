@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="/static/vendor/alpine.min.js" defer></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .success { color: green; }
+        .error { color: red; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Alpine.js + API 集成测试</h1>
+    
+    <div x-data="testApp()">
+        <h2>测试 1: Alpine.js 基础功能</h2>
+        <button @click="count++">点击计数: <span x-text="count"></span></button>
+        <p x-show="count > 0" class="success">✓ Alpine.js 正常工作</p>
+        
+        <hr>
+        
+        <h2>测试 2: 创建任务 API</h2>
+        <input type="text" x-model="taskDesc" placeholder="任务描述" style="padding: 8px; width: 300px;">
+        <button @click="createTask()" :disabled="loading">
+            <span x-text="loading ? '创建中...' : '创建任务'"></span>
+        </button>
+        
+        <div x-show="result" style="margin-top: 10px;">
+            <p x-show="result?.success" class="success" x-text="'✓ 任务创建成功: ' + result?.id"></p>
+            <p x-show="result?.error" class="error" x-text="'✗ 错误: ' + result?.error"></p>
+        </div>
+        
+        <hr>
+        
+        <h2>测试 3: 加载看板</h2>
+        <button @click="loadBoard()">加载看板</button>
+        <div x-show="board" style="margin-top: 10px;">
+            <p class="success">✓ 看板加载成功</p>
+            <pre x-text="JSON.stringify(board, null, 2)" style="background: #f5f5f5; padding: 10px;"></pre>
+        </div>
+    </div>
+    
+    <script>
+        function testApp() {
+            return {
+                count: 0,
+                taskDesc: 'E2E集成测试任务',
+                loading: false,
+                result: null,
+                board: null,
+                
+                async createTask() {
+                    console.log('createTask called');
+                    this.loading = true;
+                    this.result = null;
+                    
+                    try {
+                        const res = await fetch('/api/kanban/tasks', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                description: this.taskDesc,
+                                priority: 'P2'
+                            })
+                        });
+                        
+                        if (!res.ok) {
+                            const data = await res.json();
+                            throw new Error(data.detail || '创建失败');
+                        }
+                        
+                        const data = await res.json();
+                        this.result = { success: true, id: data.id };
+                        console.log('Task created:', data);
+                    } catch (e) {
+                        this.result = { error: e.message };
+                        console.error('Error:', e);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                async loadBoard() {
+                    try {
+                        const res = await fetch('/api/kanban/board');
+                        this.board = await res.json();
+                        console.log('Board loaded:', this.board);
+                    } catch (e) {
+                        console.error('Load board error:', e);
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>

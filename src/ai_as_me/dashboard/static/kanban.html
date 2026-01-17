@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kanban 看板 - AI-as-Me</title>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <script src="https://unpkg.com/alpinejs@3.13.3" defer></script>
+    <script src="/static/vendor/alpine.min.js" defer></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
@@ -69,16 +69,20 @@
             <div class="flex gap-2">
                 <input type="text" x-model="newTask" @keyup.enter="createTask()" 
                        placeholder="输入任务描述..." 
-                       class="flex-1 px-4 py-2 border rounded">
-                <select x-model="newPriority" class="px-4 py-2 border rounded">
+                       class="flex-1 px-4 py-2 border rounded"
+                       :disabled="loading">
+                <select x-model="newPriority" class="px-4 py-2 border rounded" :disabled="loading">
                     <option value="P1">P1 高</option>
                     <option value="P2" selected>P2 中</option>
                     <option value="P3">P3 低</option>
                 </select>
-                <button @click="createTask()" class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                    + 创建任务
+                <button @click="createTask()" 
+                        :disabled="loading"
+                        class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                        x-text="loading ? '创建中...' : '+ 创建任务'">
                 </button>
             </div>
+            <div x-show="error" class="mt-2 text-red-600" x-text="error"></div>
         </div>
 
         <!-- 看板 -->
@@ -86,10 +90,10 @@
             <!-- Inbox -->
             <div class="bg-white rounded shadow">
                 <div class="bg-purple-600 text-white px-4 py-3 rounded-t">
-                    <h2 class="font-bold">📥 Inbox <span x-text="board.inbox.length"></span></h2>
+                    <h2 class="font-bold">📥 Inbox <span x-text="(board.inbox || []).length"></span></h2>
                 </div>
                 <div class="p-4 space-y-3 min-h-[400px]">
-                    <template x-for="task in board.inbox" :key="task.id">
+                    <template x-for="task in (board.inbox || [])" :key="task.id">
                         <div class="border rounded p-3 hover:shadow cursor-pointer transition-shadow" @click="showTask(task)">
                             <div class="flex items-start gap-2 mb-2">
                                 <span :class="getPriorityBadge(task.priority)" class="text-xs font-bold px-2 py-1 rounded" x-text="task.priority"></span>
@@ -110,10 +114,10 @@
             <!-- Todo -->
             <div class="bg-white rounded shadow">
                 <div class="bg-blue-600 text-white px-4 py-3 rounded-t">
-                    <h2 class="font-bold">📝 Todo <span x-text="board.todo.length"></span></h2>
+                    <h2 class="font-bold">📝 Todo <span x-text="(board.todo || []).length"></span></h2>
                 </div>
                 <div class="p-4 space-y-3 min-h-[400px]">
-                    <template x-for="task in board.todo" :key="task.id">
+                    <template x-for="task in (board.todo || [])" :key="task.id">
                         <div class="border rounded p-3 hover:shadow cursor-pointer transition-shadow" @click="showTask(task)">
                             <div class="flex items-start gap-2 mb-2">
                                 <span :class="getPriorityBadge(task.priority)" class="text-xs font-bold px-2 py-1 rounded" x-text="task.priority"></span>
@@ -131,10 +135,10 @@
             <!-- Doing -->
             <div class="bg-white rounded shadow">
                 <div class="bg-orange-600 text-white px-4 py-3 rounded-t">
-                    <h2 class="font-bold">🔄 Doing <span x-text="board.doing.length"></span></h2>
+                    <h2 class="font-bold">🔄 Doing <span x-text="(board.doing || []).length"></span></h2>
                 </div>
                 <div class="p-4 space-y-3 min-h-[400px]">
-                    <template x-for="task in board.doing" :key="task.id">
+                    <template x-for="task in (board.doing || [])" :key="task.id">
                         <div class="border-2 border-orange-300 rounded p-3 hover:shadow cursor-pointer transition-shadow bg-orange-50" @click="showTask(task)">
                             <div class="flex items-start gap-2 mb-2">
                                 <span :class="getPriorityBadge(task.priority)" class="text-xs font-bold px-2 py-1 rounded" x-text="task.priority"></span>
@@ -163,10 +167,10 @@
             <!-- Done -->
             <div class="bg-white rounded shadow">
                 <div class="bg-green-600 text-white px-4 py-3 rounded-t">
-                    <h2 class="font-bold">✅ Done <span x-text="board.done.length"></span></h2>
+                    <h2 class="font-bold">✅ Done <span x-text="(board.done || []).length"></span></h2>
                 </div>
                 <div class="p-4 space-y-3 min-h-[400px]">
-                    <template x-for="task in board.done" :key="task.id">
+                    <template x-for="task in (board.done || [])" :key="task.id">
                         <div class="border rounded p-3 bg-gray-50">
                             <div class="font-medium text-sm text-gray-600" x-text="'✓ ' + task.title"></div>
                             <div class="text-xs text-gray-500 mt-1" x-text="task.priority"></div>
@@ -329,6 +333,6 @@
         </div>
     </main>
 
-    <script src="/static/js/kanban.js"></script>
+    <script src="/static/js/kanban.js?v=20260117095900"></script>
 </body>
 </html>

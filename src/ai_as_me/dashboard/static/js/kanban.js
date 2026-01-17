@@ -21,6 +21,7 @@ function kanbanApp() {
         },
 
         async init() {
+            console.log('kanbanApp initialized');
             await this.loadBoard();
             await this.loadAgentStatus();
             // 定期刷新Agent状态
@@ -44,20 +45,34 @@ function kanbanApp() {
             try {
                 const res = await fetch('/api/kanban/board');
                 if (!res.ok) throw new Error('加载看板失败');
-                this.board = await res.json();
+                const data = await res.json();
+                // 确保所有状态都存在
+                this.board = {
+                    inbox: data.inbox || [],
+                    todo: data.todo || [],
+                    doing: data.doing || [],
+                    done: data.done || []
+                };
             } catch (e) {
                 this.error = e.message;
+                // 出错时也保持board结构完整
+                this.board = { inbox: [], todo: [], doing: [], done: [] };
             } finally {
                 this.loading = false;
             }
         },
 
         async createTask() {
-            if (!this.newTask.trim()) return;
+            console.log('createTask called', this.newTask, this.newPriority);
+            if (!this.newTask.trim()) {
+                console.log('Empty task, returning');
+                return;
+            }
             
             this.loading = true;
             this.error = '';
             try {
+                console.log('Sending POST request...');
                 const res = await fetch('/api/kanban/tasks', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -67,6 +82,7 @@ function kanbanApp() {
                     })
                 });
                 
+                console.log('Response status:', res.status);
                 if (!res.ok) {
                     const data = await res.json();
                     throw new Error(data.detail || '创建任务失败');
@@ -74,7 +90,9 @@ function kanbanApp() {
                 
                 this.newTask = '';
                 await this.loadBoard();
+                console.log('Task created successfully');
             } catch (e) {
+                console.error('Create task error:', e);
                 this.error = e.message;
             } finally {
                 this.loading = false;
