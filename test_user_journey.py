@@ -193,7 +193,7 @@ try:
     log_stage("阶段4: 任务执行", "🚀")
     
     log_step("4.1 手动触发任务执行")
-    r = requests.post(f"{BASE_URL}/api/kanban/tasks/{task_id}/execute", timeout=5)
+    r = requests.post(f"{BASE_URL}/api/kanban/tasks/{task_id}/execute", timeout=30)
     if r.status_code == 200:
         log_step("任务执行已触发", "PASS")
         results.append(("触发执行", True))

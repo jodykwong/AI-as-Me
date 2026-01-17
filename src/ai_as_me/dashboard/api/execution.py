@@ -13,11 +13,23 @@ execution_status = {}
 
 def get_executor():
     """获取TaskExecutor实例."""
+    import os
+    from dotenv import load_dotenv
     from ai_as_me.llm.client import LLMClient
     from ai_as_me.llm.executor import TaskExecutor
     from ai_as_me.soul.loader import load_soul_context
     
-    llm_client = LLMClient()
+    # 加载环境变量
+    load_dotenv()
+    
+    api_key = os.getenv("DEEPSEEK_API_KEY")
+    base_url = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
+    model = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+    
+    if not api_key:
+        raise ValueError("DEEPSEEK_API_KEY not found in environment")
+    
+    llm_client = LLMClient(api_key=api_key, base_url=base_url, model=model)
     soul_context = load_soul_context(Path("soul"))
     return TaskExecutor(llm_client, soul_context)
 
