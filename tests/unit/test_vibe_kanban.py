@@ -201,21 +201,18 @@ class TestTaskWorkflow:
         task = manager.create_task("实现功能", "P1")
         assert task.status == TaskStatus.INBOX
         
-        # 2. 澄清任务
+        # 2. 澄清任务（自动移到todo）
         clarified = manager.clarify_task(task.id, {
             "goal": "实现用户登录",
             "acceptance_criteria": ["用户可以登录", "返回 token"]
         })
         assert clarified.clarified is True
+        assert clarified.status == TaskStatus.TODO  # 澄清后自动移到todo
         
-        # 3. 移动到 todo
-        todo_task = manager.move_task(task.id, "todo")
-        assert todo_task.status == TaskStatus.TODO
-        
-        # 4. 开始执行
-        doing_task = manager.move_task(task.id, "doing")
+        # 3. 开始执行
+        doing_task = manager.move_task(clarified.id, "doing")
         assert doing_task.status == TaskStatus.DOING
         
-        # 5. 完成
-        done_task = manager.move_task(task.id, "done")
+        # 4. 完成
+        done_task = manager.move_task(clarified.id, "done")
         assert done_task.status == TaskStatus.DONE
