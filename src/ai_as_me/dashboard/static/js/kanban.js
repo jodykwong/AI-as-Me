@@ -1,6 +1,7 @@
 function kanbanApp() {
     return {
         board: { inbox: [], todo: [], doing: [], done: [] },
+        agentStatus: null,
         newTask: '',
         newPriority: 'P2',
         showClarifyModal: false,
@@ -21,8 +22,20 @@ function kanbanApp() {
 
         async init() {
             await this.loadBoard();
-            // 定期刷新执行状态
-            setInterval(() => this.refreshExecutionStatus(), 3000);
+            await this.loadAgentStatus();
+            // 定期刷新Agent状态
+            setInterval(() => this.loadAgentStatus(), 5000);
+        },
+
+        async loadAgentStatus() {
+            try {
+                const res = await fetch('/api/agent/status');
+                if (res.ok) {
+                    this.agentStatus = await res.json();
+                }
+            } catch (e) {
+                console.error('Failed to load agent status:', e);
+            }
         },
 
         async loadBoard() {
@@ -175,73 +188,6 @@ function kanbanApp() {
                 'P3': 'bg-gray-100 text-gray-800 border border-gray-300'
             };
             return badges[priority] || '';
-        },
-
-        async executeTask(taskId) {
-            this.loading = true;
-            this.error = '';
-            try {
-                const res = await fetch(`/api/kanban/tasks/${taskId}/execute`, {
-                    method: 'POST'
-                });
-                
-                if (!res.ok) {
-                    const data = await res.json();
-                    throw new Error(data.detail || '执行失败');
-                }
-                
-                const data = await res.json();
-                this.error = '';
-                // 显示成功提示
-                alert('✅ 任务已开始执行');
-            } catch (e) {
-                this.error = e.message;
-            } finally {
-                this.loading = false;
-            }
-        },
-
-        async checkExecution(taskId) {
-            try {
-                const res = await fetch(`/api/kanban/tasks/${taskId}/execution`);
-                if (res.ok) {
-                    return await res.json();
-                }
-            } catch (e) {
-                console.error('Check execution failed:', e);
-            }
-            return null;
-        },
-
-        async showExecutionLog(taskId) {
-            try {
-                const res = await fetch(`/api/kanban/tasks/${taskId}/execution`);
-                if (res.ok) {
-                    this.executionLog = await res.json();
-                    this.showExecutionModal = true;
-                } else {
-                    this.error = '获取执行日志失败';
-                }
-            } catch (e) {
-                this.error = e.message;
-            }
-        },
-
-        async refreshExecutionStatus() {
-            // 刷新doing任务的执行状态
-            for (const task of this.board.doing) {
-                await this.checkExecution(task.id);
-            }
-        },
-
-        getStatusText(status) {
-            const texts = {
-                'not_started': '⚪ 未开始',
-                'running': '🔵 执行中...',
-                'completed': '✅ 执行完成',
-                'failed': '❌ 执行失败'
-            };
-            return texts[status] || status;
         },
 
         formatTime(isoString) {
