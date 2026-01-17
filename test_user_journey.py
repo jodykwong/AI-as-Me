@@ -192,25 +192,79 @@ try:
     # ========================================
     log_stage("阶段4: 任务执行", "🚀")
     
-    log_step("4.1 查看任务详情（执行中）")
-    r = requests.get(f"{BASE_URL}/api/kanban/tasks/{task_id}", timeout=5)
+    log_step("4.1 手动触发任务执行")
+    r = requests.post(f"{BASE_URL}/api/kanban/tasks/{task_id}/execute", timeout=5)
     if r.status_code == 200:
-        task = r.json()
-        log_step(f"任务状态: {task['status']}", "PASS")
-        
-        if task.get("clarification"):
-            clarif = task["clarification"]
-            log_step(f"目标: {clarif.get('goal', '')[:50]}...", "PASS")
-            log_step(f"验收标准数量: {len(clarif.get('acceptance_criteria', []))}", "PASS")
-            log_step(f"工具: {clarif.get('tool', '')}", "PASS")
-            log_step(f"时间估算: {clarif.get('time_estimate', '')}", "PASS")
-            results.append(("查看执行详情", True))
-        else:
-            log_step("缺少澄清信息", "FAIL")
-            results.append(("查看执行详情", False))
+        log_step("任务执行已触发", "PASS")
+        results.append(("触发执行", True))
     else:
-        log_step(f"获取任务失败: {r.status_code}", "FAIL")
-        results.append(("查看执行详情", False))
+        log_step(f"触发执行失败: {r.status_code}", "FAIL")
+        results.append(("触发执行", False))
+    
+    log_step("4.2 查询执行状态")
+    time.sleep(1)  # 等待执行开始
+    r = requests.get(f"{BASE_URL}/api/kanban/tasks/{task_id}/execution", timeout=5)
+    if r.status_code == 200:
+        exec_status = r.json()
+        log_step(f"执行状态: {exec_status.get('status')}", "PASS")
+        if exec_status.get('status') in ['running', 'completed', 'failed']:
+            results.append(("查询执行状态", True))
+        else:
+            results.append(("查询执行状态", False))
+    else:
+        log_step("查询执行状态失败", "FAIL")
+        results.append(("查询执行状态", False))
+    
+    log_step("4.3 等待执行完成或超时")
+    max_wait = 30  # 最多等待30秒
+    waited = 0
+    final_status = None
+    while waited < max_wait:
+        r = requests.get(f"{BASE_URL}/api/kanban/tasks/{task_id}/execution", timeout=5)
+        if r.status_code == 200:
+            exec_status = r.json()
+            status = exec_status.get('status')
+            if status in ['completed', 'failed']:
+                final_status = status
+                log_step(f"执行结束: {status}", "PASS" if status == 'completed' else "FAIL")
+                break
+        time.sleep(2)
+        waited += 2
+    
+    if final_status:
+        results.append(("执行完成", final_status == 'completed'))
+    else:
+        log_step("执行超时", "FAIL")
+        results.append(("执行完成", False))
+    
+    time.sleep(0.5)
+    
+    # ========================================
+    # 阶段4.5: 监控执行 👀
+    # ========================================
+    log_stage("阶段4.5: 监控执行", "👀")
+    
+    log_step("4.5.1 获取执行日志")
+    r = requests.get(f"{BASE_URL}/api/kanban/tasks/{task_id}/execution", timeout=5)
+    if r.status_code == 200:
+        exec_log = r.json()
+        log_step("获取执行日志成功", "PASS")
+        
+        if exec_log.get('logs'):
+            log_step(f"日志条数: {len(exec_log['logs'])}", "PASS")
+            results.append(("获取执行日志", True))
+        else:
+            log_step("日志为空", "FAIL")
+            results.append(("获取执行日志", False))
+        
+        if exec_log.get('started_at'):
+            log_step(f"开始时间: {exec_log['started_at']}", "PASS")
+        
+        if exec_log.get('completed_at'):
+            log_step(f"完成时间: {exec_log['completed_at']}", "PASS")
+    else:
+        log_step("获取执行日志失败", "FAIL")
+        results.append(("获取执行日志", False))
     
     time.sleep(0.5)
     
