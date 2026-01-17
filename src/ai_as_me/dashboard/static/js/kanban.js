@@ -248,6 +248,49 @@ function kanbanApp() {
             if (!isoString) return '';
             const date = new Date(isoString);
             return date.toLocaleString('zh-CN');
+        },
+
+        formatMarkdown(text) {
+            if (!text) return '';
+            
+            // 简单的Markdown渲染
+            let html = text;
+            
+            // 代码块
+            html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
+                return `<div class="my-3 bg-gray-900 text-gray-100 p-3 rounded"><pre class="text-xs overflow-x-auto"><code>${this.escapeHtml(code.trim())}</code></pre></div>`;
+            });
+            
+            // 行内代码
+            html = html.replace(/`([^`]+)`/g, '<code class="bg-gray-100 px-1 py-0.5 rounded text-sm">$1</code>');
+            
+            // 标题
+            html = html.replace(/^### (.+)$/gm, '<h3 class="text-lg font-bold mt-4 mb-2">$1</h3>');
+            html = html.replace(/^## (.+)$/gm, '<h2 class="text-xl font-bold mt-4 mb-2">$1</h2>');
+            html = html.replace(/^# (.+)$/gm, '<h1 class="text-2xl font-bold mt-4 mb-2">$1</h1>');
+            
+            // 列表
+            html = html.replace(/^- (.+)$/gm, '<li class="ml-4">• $1</li>');
+            html = html.replace(/^\d+\. (.+)$/gm, '<li class="ml-4 list-decimal">$1</li>');
+            
+            // 粗体
+            html = html.replace(/\*\*(.+?)\*\*/g, '<strong class="font-bold">$1</strong>');
+            
+            // 段落
+            html = html.split('\n\n').map(p => {
+                if (p.trim() && !p.startsWith('<')) {
+                    return `<p class="mb-2">${p}</p>`;
+                }
+                return p;
+            }).join('\n');
+            
+            return html;
+        },
+
+        escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
     };
 }
