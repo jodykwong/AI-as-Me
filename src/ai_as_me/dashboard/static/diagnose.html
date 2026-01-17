@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Alpine.js 诊断</title>
+    <script src="/static/vendor/alpine.min.js" defer></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .test { margin: 20px 0; padding: 15px; border: 2px solid #ddd; border-radius: 5px; }
+        .success { border-color: green; background: #f0fff0; }
+        .error { border-color: red; background: #fff0f0; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Alpine.js 诊断工具</h1>
+    
+    <div class="test">
+        <h2>测试 1: Alpine.js 加载</h2>
+        <div id="alpine-check">检查中...</div>
+    </div>
+    
+    <div class="test" x-data="{ count: 0, message: 'Alpine 正常工作!' }">
+        <h2>测试 2: 基础响应式</h2>
+        <p>计数: <strong x-text="count"></strong></p>
+        <button @click="count++">点击增加</button>
+        <p x-show="count > 0" style="color: green;" x-text="message"></p>
+    </div>
+    
+    <div class="test" x-data="testApp()">
+        <h2>测试 3: 函数初始化</h2>
+        <p>状态: <strong x-text="status"></strong></p>
+        <input type="text" x-model="input" placeholder="输入文字" style="padding: 8px; width: 300px;">
+        <p>你输入了: <strong x-text="input"></strong></p>
+        <button @click="testClick()">测试点击</button>
+        <p x-show="clicked" style="color: green;">✓ 点击成功！</p>
+    </div>
+    
+    <div class="test">
+        <h2>测试 4: 浏览器信息</h2>
+        <pre id="browser-info"></pre>
+    </div>
+    
+    <script>
+        // 测试 Alpine 加载
+        setTimeout(() => {
+            const el = document.getElementById('alpine-check');
+            if (typeof Alpine !== 'undefined') {
+                el.innerHTML = '✅ Alpine.js 已加载 (版本: ' + (Alpine.version || '未知') + ')';
+                el.parentElement.classList.add('success');
+            } else {
+                el.innerHTML = '❌ Alpine.js 未加载';
+                el.parentElement.classList.add('error');
+            }
+        }, 1000);
+        
+        // 测试函数
+        function testApp() {
+            console.log('testApp() 被调用');
+            return {
+                status: '已初始化',
+                input: '',
+                clicked: false,
+                
+                testClick() {
+                    console.log('testClick() 被调用');
+                    this.clicked = true;
+                    alert('点击事件正常工作！');
+                }
+            };
+        }
+        
+        // 浏览器信息
+        document.getElementById('browser-info').textContent = 
+            'User Agent: ' + navigator.userAgent + '\n' +
+            'Platform: ' + navigator.platform + '\n' +
+            'Language: ' + navigator.language + '\n' +
+            'Cookies Enabled: ' + navigator.cookieEnabled + '\n' +
+            'Online: ' + navigator.onLine;
+    </script>
+</body>
+</html>

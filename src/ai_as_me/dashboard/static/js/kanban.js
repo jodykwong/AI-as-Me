@@ -22,6 +22,8 @@ function kanbanApp() {
 
         async init() {
             console.log('kanbanApp initialized');
+            // 先设置默认值，避免渲染错误
+            this.board = { inbox: [], todo: [], doing: [], done: [] };
             await this.loadBoard();
             await this.loadAgentStatus();
             // 定期刷新Agent状态

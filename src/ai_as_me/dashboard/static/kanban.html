@@ -5,8 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kanban 看板 - AI-as-Me</title>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="/static/js/kanban.js?v=20260117104437"></script>
     <script src="/static/vendor/alpine.min.js" defer></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body class="bg-gray-50">
@@ -23,7 +27,7 @@
         </div>
     </nav>
 
-    <main class="container mx-auto px-4 py-6" x-data="kanbanApp()">
+    <main class="container mx-auto px-4 py-6" x-data="kanbanApp()" x-cloak>
         <!-- Loading 状态 -->
         <div x-show="loading" class="fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50">
             <div class="text-center">
@@ -333,6 +337,5 @@
         </div>
     </main>
 
-    <script src="/static/js/kanban.js?v=20260117095900"></script>
 </body>
 </html>
