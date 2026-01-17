@@ -6,8 +6,10 @@ function kanbanApp() {
         showClarifyModal: false,
         showCelebration: false,
         showExecutionModal: false,
+        showTaskModal: false,
         executionLog: null,
         currentTask: null,
+        currentTaskDetail: null,
         loading: false,
         error: '',
         clarifyForm: {
@@ -152,8 +154,9 @@ function kanbanApp() {
         },
 
         showTask(task) {
-            // 显示任务详情（简化版）
-            console.log('Task:', task);
+            // 显示任务详情
+            this.currentTaskDetail = task;
+            this.showTaskModal = true;
         },
 
         getPriorityClass(priority) {
