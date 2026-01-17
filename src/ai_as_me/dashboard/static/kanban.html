@@ -114,10 +114,34 @@
                                 <span :class="getPriorityBadge(task.priority)" class="text-xs font-bold px-2 py-1 rounded" x-text="task.priority"></span>
                                 <div class="font-medium text-sm flex-1" x-text="task.title"></div>
                             </div>
-                            <button @click.stop="moveTask(task.id, 'done')" 
-                                    class="w-full px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors mt-2 font-medium">
-                                ✅ 完成
-                            </button>
+                            
+                            <!-- 执行状态 -->
+                            <div x-data="{ execStatus: null }" x-init="$watch('task.id', () => checkExecution(task.id).then(s => execStatus = s))">
+                                <div x-show="execStatus && execStatus.status === 'running'" class="text-xs text-blue-600 mb-2 flex items-center gap-1">
+                                    <span class="animate-spin">⚙️</span> 执行中...
+                                </div>
+                                <div x-show="execStatus && execStatus.status === 'completed'" class="text-xs text-green-600 mb-2">
+                                    ✅ 执行完成
+                                </div>
+                                <div x-show="execStatus && execStatus.status === 'failed'" class="text-xs text-red-600 mb-2">
+                                    ❌ 执行失败
+                                </div>
+                            </div>
+                            
+                            <div class="flex gap-1">
+                                <button @click.stop="executeTask(task.id)" 
+                                        class="flex-1 px-2 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700 transition-colors">
+                                    ⚡ 执行
+                                </button>
+                                <button @click.stop="showExecutionLog(task.id)" 
+                                        class="px-2 py-1 bg-gray-600 text-white text-xs rounded hover:bg-gray-700 transition-colors">
+                                    📋
+                                </button>
+                                <button @click.stop="moveTask(task.id, 'done')" 
+                                        class="flex-1 px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors font-medium">
+                                    ✅ 完成
+                                </button>
+                            </div>
                         </div>
                     </template>
                 </div>
@@ -219,6 +243,76 @@
                 <div class="text-6xl mb-4">🎉</div>
                 <div class="text-2xl font-bold text-green-600">任务完成！</div>
                 <div class="text-gray-600 mt-2">又完成一个任务，继续加油！</div>
+            </div>
+        </div>
+
+        <!-- 执行日志弹窗 -->
+        <div x-show="showExecutionModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" 
+             @click.self="showExecutionModal = false">
+            <div class="bg-white rounded-lg p-6 w-full max-w-3xl max-h-[80vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold">📋 执行日志</h3>
+                    <button @click="showExecutionModal = false" class="text-gray-500 hover:text-gray-700">✕</button>
+                </div>
+                
+                <div x-show="executionLog">
+                    <!-- 状态 -->
+                    <div class="mb-4 p-3 rounded" :class="{
+                        'bg-blue-50 border border-blue-200': executionLog?.status === 'running',
+                        'bg-green-50 border border-green-200': executionLog?.status === 'completed',
+                        'bg-red-50 border border-red-200': executionLog?.status === 'failed',
+                        'bg-gray-50 border border-gray-200': executionLog?.status === 'not_started'
+                    }">
+                        <div class="font-medium" x-text="getStatusText(executionLog?.status)"></div>
+                        <div class="text-sm text-gray-600 mt-1" x-show="executionLog?.started_at">
+                            开始时间: <span x-text="formatTime(executionLog?.started_at)"></span>
+                        </div>
+                        <div class="text-sm text-gray-600" x-show="executionLog?.completed_at">
+                            完成时间: <span x-text="formatTime(executionLog?.completed_at)"></span>
+                        </div>
+                    </div>
+                    
+                    <!-- 日志 -->
+                    <div x-show="executionLog?.logs && executionLog.logs.length > 0" class="mb-4">
+                        <h4 class="font-medium mb-2">执行日志:</h4>
+                        <div class="bg-gray-900 text-gray-100 p-3 rounded font-mono text-xs max-h-60 overflow-y-auto">
+                            <template x-for="log in executionLog?.logs" :key="log.time">
+                                <div class="mb-1">
+                                    <span class="text-gray-400" x-text="formatTime(log.time)"></span>
+                                    <span :class="{
+                                        'text-blue-400': log.level === 'INFO',
+                                        'text-green-400': log.level === 'SUCCESS',
+                                        'text-red-400': log.level === 'ERROR'
+                                    }" x-text="'[' + log.level + ']'"></span>
+                                    <span x-text="log.message"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                    
+                    <!-- 结果 -->
+                    <div x-show="executionLog?.result" class="mb-4">
+                        <h4 class="font-medium mb-2">执行结果:</h4>
+                        <div class="bg-gray-50 p-3 rounded border">
+                            <pre class="text-sm whitespace-pre-wrap" x-text="JSON.stringify(executionLog?.result, null, 2)"></pre>
+                        </div>
+                    </div>
+                    
+                    <!-- 错误 -->
+                    <div x-show="executionLog?.error" class="mb-4">
+                        <h4 class="font-medium mb-2 text-red-600">错误信息:</h4>
+                        <div class="bg-red-50 p-3 rounded border border-red-200 text-red-800">
+                            <pre class="text-sm whitespace-pre-wrap" x-text="executionLog?.error"></pre>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end">
+                    <button @click="showExecutionModal = false" 
+                            class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
+                        关闭
+                    </button>
+                </div>
             </div>
         </div>
     </main>

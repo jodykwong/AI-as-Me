@@ -23,8 +23,9 @@ app.add_middleware(
 )
 
 # 注册 API 路由（顺序很重要！）
-from .api import inspirations, rules, stats, logs, kanban, soul
+from .api import inspirations, rules, stats, logs, kanban, soul, execution
 
+app.include_router(execution.router, prefix="/api", tags=["execution"])
 app.include_router(kanban.router, prefix="/api", tags=["kanban"])
 app.include_router(soul.router, prefix="/api", tags=["soul"])
 app.include_router(rules.router, prefix="/api", tags=["rules"])
