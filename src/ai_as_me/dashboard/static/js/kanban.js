@@ -1,5 +1,6 @@
 function kanbanApp() {
-    return {
+    console.log('kanbanApp called');
+    const app = {
         board: { inbox: [], todo: [], doing: [], done: [] },
         agentStatus: null,
         newTask: '',
@@ -8,6 +9,8 @@ function kanbanApp() {
         showCelebration: false,
         showExecutionModal: false,
         showTaskModal: false,
+        editMode: false,
+        editTask: null,
         executionLog: null,
         currentTask: null,
         currentTaskDetail: null,
@@ -42,12 +45,21 @@ function kanbanApp() {
         },
 
         async loadBoard() {
+            console.log('loadBoard called');
             this.loading = true;
             this.error = '';
             try {
-                const res = await fetch('/api/kanban/board');
+                console.log('Fetching board data...');
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+                
+                const res = await fetch('/api/kanban/board', { signal: controller.signal });
+                clearTimeout(timeoutId);
+                
+                console.log('Board response:', res.status);
                 if (!res.ok) throw new Error('加载看板失败');
                 const data = await res.json();
+                console.log('Board data received:', Object.keys(data).map(k => `${k}:${data[k].length}`));
                 // 确保所有状态都存在
                 this.board = {
                     inbox: data.inbox || [],
@@ -55,7 +67,9 @@ function kanbanApp() {
                     doing: data.doing || [],
                     done: data.done || []
                 };
+                console.log('Board updated');
             } catch (e) {
+                console.error('loadBoard error:', e);
                 this.error = e.message;
                 // 出错时也保持board结构完整
                 this.board = { inbox: [], todo: [], doing: [], done: [] };
@@ -189,7 +203,53 @@ function kanbanApp() {
         showTask(task) {
             // 显示任务详情
             this.currentTaskDetail = task;
+            this.editMode = false;
+            this.editTask = null;
             this.showTaskModal = true;
+        },
+
+        editTaskMode(task) {
+            this.editMode = true;
+            this.editTask = {
+                id: task.id,
+                description: task.description,
+                priority: task.priority
+            };
+        },
+
+        async saveTask() {
+            if (!this.editTask.description.trim()) {
+                this.error = '任务描述不能为空';
+                return;
+            }
+
+            this.loading = true;
+            this.error = '';
+            try {
+                const res = await fetch(`/api/kanban/tasks/${this.editTask.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        description: this.editTask.description,
+                        priority: this.editTask.priority
+                    })
+                });
+
+                if (!res.ok) throw new Error('更新任务失败');
+                
+                this.editMode = false;
+                this.editTask = null;
+                await this.loadBoard();
+            } catch (e) {
+                this.error = e.message;
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        cancelEdit() {
+            this.editMode = false;
+            this.editTask = null;
         },
 
         getPriorityClass(priority) {
@@ -259,4 +319,6 @@ function kanbanApp() {
             return div.innerHTML;
         }
     };
+    console.log('kanbanApp returning object');
+    return app;
 }

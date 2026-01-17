@@ -107,7 +107,9 @@
                         body: JSON.stringify({description: this.newTask})
                     });
                     if (response.ok) { this.newTask = ''; this.loadTasks(); }
-                } finally { this.isCreating = false; }
+                    else { console.error('Create failed:', response.status, await response.text()); }
+                } catch(e) { console.error('Create error:', e); } 
+                finally { this.isCreating = false; }
             },
             async loadTasks() { const response = await fetch('/api/tasks'); this.tasks = await response.json(); },
             init() { this.loadTasks(); this.connectSSE(); },

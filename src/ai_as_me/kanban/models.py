@@ -44,6 +44,8 @@ class Task(BaseModel):
     clarification: TaskClarification = Field(default_factory=TaskClarification)
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
+    execution_status: Optional[str] = None  # pending, running, completed, failed
+    has_result: bool = False
     
     def to_markdown(self) -> str:
         criteria = "\n".join(f"- [ ] {c}" for c in self.clarification.acceptance_criteria) or "- [ ] 待定义"

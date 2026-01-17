@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script>
+        function testApp() {
+            console.log('testApp called');
+            return { message: 'Hello' };
+        }
+    </script>
+</head>
+<body>
+    <div x-data="testApp()">
+        <p x-text="message"></p>
+    </div>
+</body>
+</html>

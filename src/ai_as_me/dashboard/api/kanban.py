@@ -2,6 +2,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pathlib import Path
 from typing import List
+from datetime import datetime
 
 from ...kanban.models import Task, TaskCreate, TaskClarifyRequest, TaskMoveRequest
 from ...kanban.vibe_manager import VibeKanbanManager
@@ -19,10 +20,10 @@ async def get_board(manager: VibeKanbanManager = Depends(get_manager)) -> dict:
     """获取看板数据."""
     board = manager.get_board()
     return {
-        "inbox": [t.dict() for t in board["inbox"]],
-        "todo": [t.dict() for t in board["todo"]],
-        "doing": [t.dict() for t in board["doing"]],
-        "done": [t.dict() for t in board["done"]]
+        "inbox": [t.dict() for t in board["inbox"] if t.id],
+        "todo": [t.dict() for t in board["todo"] if t.id],
+        "doing": [t.dict() for t in board["doing"] if t.id],
+        "done": [t.dict() for t in board["done"] if t.id]
     }
 
 
@@ -47,6 +48,21 @@ async def create_task(task_create: TaskCreate, manager: VibeKanbanManager = Depe
         return task.dict()
     except ValueError as e:
         raise HTTPException(400, str(e))
+
+
+@router.put("/kanban/tasks/{task_id}")
+async def update_task(task_id: str, task_update: TaskCreate, manager: VibeKanbanManager = Depends(get_manager)) -> dict:
+    """更新任务内容."""
+    task = manager.get_task(task_id)
+    task.description = task_update.description
+    task.title = task_update.description[:50] + ("..." if len(task_update.description) > 50 else "")
+    task.priority = task_update.priority
+    task.updated_at = datetime.now()
+    
+    file_path = manager._find_task_file(task_id)
+    file_path.write_text(task.to_markdown(), encoding='utf-8')
+    
+    return {"id": task_id, "message": "任务已更新"}
 
 
 @router.put("/kanban/tasks/{task_id}/clarify")
@@ -82,3 +98,33 @@ async def delete_task(task_id: str, manager: VibeKanbanManager = Depends(get_man
     if not success:
         raise HTTPException(404, f"Task {task_id} not found")
     return {"success": True}
+
+
+@router.post("/kanban/tasks/{task_id}/execute")
+async def execute_task(task_id: str, agent_name: str = None, manager: VibeKanbanManager = Depends(get_manager)) -> dict:
+    """执行任务
+    
+    Args:
+        task_id: 任务 ID
+        agent_name: 指定 agent (可选)
+    
+    Returns:
+        {success: bool, agent: str, duration: float, output: str, evolution: dict}
+    """
+    try:
+        result = manager.execute_task(task_id, agent_name, trigger_evolution=True)
+        return {
+            "success": result['success'],
+            "agent": result['result'].agent_name,
+            "duration": result['result'].duration,
+            "output": result['result'].output[:500],
+            "error": result['result'].error,
+            "evolution": {
+                "patterns": len(result['evolution']['patterns']) if result['evolution'] else 0,
+                "rules": len(result['evolution']['rules']) if result['evolution'] else 0
+            } if result['evolution'] else None
+        }
+    except FileNotFoundError:
+        raise HTTPException(404, f"Task {task_id} not found")
+    except Exception as e:
+        raise HTTPException(500, str(e))

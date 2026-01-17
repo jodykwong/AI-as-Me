@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Create Task</title>
+</head>
+<body>
+    <h1>Test Create Task</h1>
+    <input type="text" id="taskInput" placeholder="Task description">
+    <button onclick="createTask()">Create</button>
+    <div id="result"></div>
+    
+    <script>
+    async function createTask() {
+        const desc = document.getElementById('taskInput').value;
+        const result = document.getElementById('result');
+        
+        try {
+            result.textContent = 'Sending...';
+            const response = await fetch('http://192.168.8.166:8080/api/tasks', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({description: desc})
+            });
+            
+            result.textContent = `Status: ${response.status} - ${await response.text()}`;
+        } catch (e) {
+            result.textContent = `Error: ${e.message}`;
+        }
+    }
+    </script>
+</body>
+</html>

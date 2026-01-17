@@ -10,6 +10,7 @@
 - 🎯 **Skills 架构**: 能力不足时自动调用外部方法论（BMad Method）
 - 📊 **进化追踪**: 完整的进化日志和统计（`ai-as-me evolve stats`）
 - 🔧 **OpenCode 集成**: 完整 MVP 工具栈（OpenCode + Claude Code）
+- 🤖 **Agent 集成**: 统一的 AI Agent 执行接口，支持多种 AI 编程助手
 
 ### v2.3 功能
 - 🎯 **任务优先级**: P1/P2/P3优先级管理
@@ -56,6 +57,22 @@ python -m ai_as_me.cli_main serve
 ```
 
 ## v3.0 新功能使用
+
+### Agent 执行
+
+```bash
+# 列出所有可用的 agents
+ai-as-me agent list
+
+# 执行任务（自动选择 agent）
+ai-as-me agent execute <task_id>
+
+# 指定 agent 执行
+ai-as-me agent execute <task_id> --agent opencode
+
+# 不触发进化
+ai-as-me agent execute <task_id> --no-evolution
+```
 
 ### 查看进化统计
 

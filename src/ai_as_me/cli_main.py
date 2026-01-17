@@ -1136,3 +1136,93 @@ def history(limit):
         if event.get('rule_categories'):
             click.echo(f"   类别: {', '.join(event['rule_categories'])}")
         click.echo()
+
+
+# Agent 执行命令
+@cli.group()
+def agent():
+    """Agent 执行命令"""
+    pass
+
+
+@agent.command()
+@click.argument('task_id')
+@click.option('--agent', default=None, help='指定 agent (claude-code/opencode)')
+@click.option('--no-evolution', is_flag=True, help='不触发进化')
+def execute(task_id, agent, no_evolution):
+    """执行指定任务"""
+    from ai_as_me.agents import AgentExecutor
+    from ai_as_me.kanban.vibe_manager import VibeManager
+    
+    # 加载任务
+    vibe = VibeManager()
+    board = vibe.get_board()
+    task = None
+    for col in ['inbox', 'todo', 'doing', 'done']:
+        for t in board[col]:
+            if t.id == task_id:
+                task = t
+                break
+        if task:
+            break
+    
+    if not task:
+        click.echo(f"❌ 任务不存在: {task_id}")
+        sys.exit(1)
+    
+    # 执行任务
+    executor = AgentExecutor()
+    click.echo(f"🤖 执行任务: {task.title}")
+    if agent:
+        click.echo(f"   使用 agent: {agent}")
+        result = executor.execute_task(task, agent)
+    else:
+        click.echo(f"   自动选择可用 agent")
+        result = executor.execute_with_fallback(task)
+    
+    # 显示结果
+    if result.success:
+        click.echo(f"✅ 执行成功 ({result.duration:.1f}s)")
+        click.echo(f"   Agent: {result.agent_name}")
+        if result.output:
+            click.echo(f"\n输出:\n{result.output[:500]}")
+    else:
+        click.echo(f"❌ 执行失败: {result.error}")
+        sys.exit(1)
+    
+    # 触发进化
+    if not no_evolution:
+        click.echo("\n🧬 触发进化...")
+        from ai_as_me.evolution.engine import EvolutionEngine
+        from ai_as_me.llm.client import LLMClient
+        
+        config = {
+            'experience_dir': 'experiences',
+            'soul_dir': 'soul',
+            'llm_client': LLMClient()
+        }
+        engine = EvolutionEngine(config)
+        evo_result = engine.evolve(task, result.output, result.success, result.duration)
+        
+        click.echo(f"   模式: {len(evo_result['patterns'])}")
+        click.echo(f"   规则: {len(evo_result['rules'])}")
+
+
+@agent.command()
+def list():
+    """列出所有可用的 agents"""
+    from ai_as_me.agents import AgentRegistry
+    
+    registry = AgentRegistry()
+    available = registry.get_available()
+    all_agents = registry.list_all()
+    
+    click.echo("🤖 已注册的 Agents:\n")
+    for name in all_agents:
+        agent = registry.get(name)
+        status = "✅ 可用" if agent.is_available() else "❌ 不可用"
+        capabilities = ", ".join(agent.get_capabilities())
+        click.echo(f"  {name}: {status}")
+        click.echo(f"    能力: {capabilities}")
+    
+    click.echo(f"\n可用: {len(available)}/{len(all_agents)}")

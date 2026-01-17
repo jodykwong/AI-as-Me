@@ -134,9 +134,93 @@ class VibeKanbanManager:
         return False
     
     def get_board(self) -> dict:
-        return {
+        """获取看板数据，包含执行结果状态."""
+        board = {
             "inbox": self.list_tasks("inbox"),
             "todo": self.list_tasks("todo"),
             "doing": self.list_tasks("doing"),
             "done": self.list_tasks("done")
         }
+        
+        # 为doing任务添加执行结果状态
+        for task in board["doing"]:
+            result_file = self.kanban_dir / "doing" / f"{task.id}-result.md"
+            if result_file.exists():
+                task.execution_status = "completed"
+                task.has_result = True
+            else:
+                task.execution_status = "pending"
+                task.has_result = False
+        
+        return board
+    
+    def execute_task(self, task_id: str, agent_name: str = None, trigger_evolution: bool = True) -> dict:
+        """执行任务并保存结果
+        
+        Args:
+            task_id: 任务 ID
+            agent_name: 指定 agent，None 则自动选择
+            trigger_evolution: 是否触发进化
+        
+        Returns:
+            {success: bool, result: AgentResult, evolution: dict}
+        """
+        from ..agents import AgentExecutor
+        
+        # 加载任务
+        task = self.get_task(task_id)
+        
+        # 如果不在 doing，先移动到 doing
+        if task.status != TaskStatus.DOING:
+            self.move_task(task_id, "doing")
+            task = self.get_task(task_id)
+        
+        # 执行任务
+        executor = AgentExecutor()
+        if agent_name:
+            result = executor.execute_task(task, agent_name)
+        else:
+            result = executor.execute_with_fallback(task)
+        
+        # 保存结果
+        result_file = self.kanban_dir / "doing" / f"{task_id}-result.md"
+        result_content = f"""# 执行结果
+
+**任务**: {task.title}
+**Agent**: {result.agent_name}
+**状态**: {'成功' if result.success else '失败'}
+**耗时**: {result.duration:.1f}s
+
+## 输出
+
+{result.output}
+
+## 错误
+
+{result.error if result.error else '无'}
+"""
+        result_file.write_text(result_content, encoding='utf-8')
+        
+        # 触发进化
+        evolution_result = None
+        if trigger_evolution and result.success:
+            from ..evolution.engine import EvolutionEngine
+            from ..llm.client import LLMClient
+            
+            config = {
+                'experience_dir': 'experiences',
+                'soul_dir': 'soul',
+                'llm_client': LLMClient()
+            }
+            engine = EvolutionEngine(config)
+            evolution_result = engine.evolve(task, result.output, result.success, result.duration)
+        
+        return {
+            'success': result.success,
+            'result': result,
+            'evolution': evolution_result
+        }
+
+
+# 向后兼容别名
+VibeManager = VibeKanbanManager
