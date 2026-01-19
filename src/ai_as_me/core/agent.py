@@ -82,10 +82,13 @@ class Agent:
         self.inspiration_pool = None
         
         if llm_client:
-            from ai_as_me.llm.executor import TaskExecutor
+            from ai_as_me.agents.executor import AgentExecutor
+            from ai_as_me.agents.registry import AgentRegistry
             from ai_as_me.clarify.analyzer import ClarificationAnalyzer
             
-            self.executor = TaskExecutor(llm_client, soul_context, tracker)
+            # 使用新的AgentExecutor支持claude-code和opencode
+            registry = AgentRegistry()
+            self.executor = AgentExecutor(registry)
             self.clarifier = ClarificationAnalyzer(llm_client)
             
             # v3.0: 初始化进化引擎
@@ -138,7 +141,41 @@ class Agent:
         """Handle shutdown signals gracefully."""
         print(f"\n🛑 Received signal {signum}, shutting down gracefully...")
         self.running = False
-    
+
+    def _format_result_metadata(self, result) -> str:
+        """格式化执行结果的元数据部分."""
+        import json
+        from datetime import datetime
+
+        metadata = result.metadata or {}
+        timestamp = metadata.get('timestamp', time.time())
+        dt = datetime.fromtimestamp(timestamp)
+
+        # 构建元数据表格
+        lines = [
+            "## 执行信息",
+            "",
+            "| 项目 | 值 |",
+            "|------|-----|",
+            f"| **状态** | ✅ 成功 |" if result.success else f"| **状态** | ❌ 失败 |",
+            f"| **Agent** | `{result.agent_name}` |",
+            f"| **模型** | `{metadata.get('model', 'N/A')}` |",
+            f"| **执行时间** | {dt.strftime('%Y-%m-%d %H:%M:%S')} |",
+            f"| **耗时** | {result.duration:.2f}s |",
+        ]
+
+        if result.error:
+            lines.append(f"| **错误** | {result.error} |")
+
+        if metadata.get('returncode') is not None:
+            lines.append(f"| **返回码** | {metadata['returncode']} |")
+
+        if metadata.get('tool'):
+            lines.append(f"| **工具** | `{metadata['tool']}` |")
+
+        lines.extend(["", "---", ""])
+        return "\n".join(lines)
+
     def _capture_inspiration(self, task_id: str, success: bool, detail: str):
         """统一的灵感捕获方法."""
         if not (self.inspiration_capturer and self.inspiration_pool):
@@ -247,18 +284,23 @@ class Agent:
                         print(f"  ⏭️  Skipping clarification (not implemented)")
                 
                 # Execute
-                print(f"  🤖 Executing with LLM...")
-                result = self.executor.execute(task)
+                print(f"  🤖 Executing with agent...")
+                result = self.executor.execute_task(task)
                 
-                if result:
-                    # Save result
+                if result and result.success:
+                    # Save result with execution metadata
                     result_file = doing_path.stem + "-result.md"
                     result_path = self.done_dir / result_file
-                    self.executor.save_result(result, result_path, doing_path.name)
+
+                    # Build result content with metadata
+                    metadata_section = self._format_result_metadata(result)
+                    result_content = f"# {task.title}\n\n{metadata_section}\n\n## 执行结果\n\n{result.output}"
+                    result_path.write_text(result_content)
                     print(f"  ✓ Result saved: {result_file}")
                     success = True
                 else:
-                    print(f"  ✗ Execution failed")
+                    error_msg = result.error if result else "Unknown error"
+                    print(f"  ✗ Execution failed: {error_msg}")
                     
             except Exception as e:
                 print(f"  ❌ Error: {e}")

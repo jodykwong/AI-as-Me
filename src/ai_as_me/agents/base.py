@@ -13,10 +13,21 @@ class AgentResult:
     agent_name: str
     duration: float
     metadata: Dict = None
-    
+
     def __post_init__(self):
         if self.metadata is None:
             self.metadata = {}
+
+    def to_dict(self):
+        """转换为字典格式，便于序列化"""
+        return {
+            'success': self.success,
+            'output': self.output,
+            'error': self.error,
+            'agent_name': self.agent_name,
+            'duration': self.duration,
+            'metadata': self.metadata
+        }
 
 
 class BaseAgent(ABC):

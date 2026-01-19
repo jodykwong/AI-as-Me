@@ -14,20 +14,23 @@ class AgentExecutor:
     
     def execute_task(self, task, agent_name: str = None) -> AgentResult:
         """执行任务
-        
+
         Args:
             task: 任务对象
             agent_name: 指定 agent 名称，None 则使用第一个可用的
                        格式: "agent-name" 或 "agent-name:model"
-        
+
         Returns:
             AgentResult
         """
+        import time
+        start_time = time.time()
+
         # 解析 agent 和 model
         model = None
         if agent_name and ':' in agent_name:
             agent_name, model = agent_name.split(':', 1)
-        
+
         # 如果任务有工具配置，优先使用
         if hasattr(task, 'clarification') and task.clarification and task.clarification.tool:
             tool_config = task.clarification.tool
@@ -35,39 +38,59 @@ class AgentExecutor:
                 agent_name, model = tool_config.split(':', 1)
             else:
                 agent_name = tool_config
-        
+
         if agent_name:
             agent = self.registry.get(agent_name)
             if not agent:
+                available_agents = self.registry.list_all()
+                error_msg = f'Agent "{agent_name}" 不存在。可用的 Agents: {", ".join(available_agents)}'
+                self.logger.error(error_msg)
                 return AgentResult(
                     success=False,
                     output='',
-                    error=f'Agent 不存在: {agent_name}',
+                    error=error_msg,
                     agent_name=agent_name,
-                    duration=0
+                    duration=time.time() - start_time,
+                    metadata={'available_agents': available_agents, 'model': model}
                 )
             if not agent.is_available():
+                error_msg = f'Agent "{agent_name}" 不可用。请检查依赖配置。'
+                self.logger.error(error_msg)
                 return AgentResult(
                     success=False,
                     output='',
-                    error=f'Agent 不可用: {agent_name}',
+                    error=error_msg,
                     agent_name=agent_name,
-                    duration=0
+                    duration=time.time() - start_time,
+                    metadata={'model': model}
                 )
         else:
             available = self.registry.get_available()
             if not available:
+                error_msg = '没有可用的 Agent。请检查 Agent 配置。'
+                self.logger.error(error_msg)
                 return AgentResult(
                     success=False,
                     output='',
-                    error='没有可用的 Agent',
+                    error=error_msg,
                     agent_name='none',
-                    duration=0
+                    duration=time.time() - start_time
                 )
             agent = available[0]
-        
-        self.logger.info(f"使用 {agent.name} 执行任务: {task.id}" + (f" (模型: {model})" if model else ""))
-        return agent.execute(task, model=model)
+
+        task_id = getattr(task, 'id', getattr(task, 'title', 'unknown'))
+        model_info = f" [模型: {model}]" if model else ""
+        self.logger.info(f"执行任务 {task_id} 使用 Agent: {agent.name}{model_info}")
+
+        result = agent.execute(task, model=model)
+
+        # 增强元数据
+        result.metadata['model'] = model
+        result.metadata['task_id'] = task_id
+        result.metadata['timestamp'] = start_time
+
+        self.logger.info(f"任务 {task_id} {'成功' if result.success else '失败'} (耗时: {result.duration:.2f}s)")
+        return result
     
     def execute_with_fallback(self, task, agents: List[str] = None) -> AgentResult:
         """执行任务，失败时自动切换备用 agent
