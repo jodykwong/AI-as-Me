@@ -1,6 +1,6 @@
 [project]
 name = "ai-as-me"
-version = "0.1.0"
+version = "3.5.0"
 description = "自进化AI数字分身系统 - Agent CLI编排与Soul注入"
 requires-python = ">=3.9"
 dependencies = [
