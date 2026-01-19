@@ -33,7 +33,6 @@ class TaskClarification(BaseModel):
     time_estimate: Optional[str] = None
     context: Optional[str] = None
 
-
 class Task(BaseModel):
     id: str
     title: str
@@ -46,6 +45,11 @@ class Task(BaseModel):
     updated_at: datetime = Field(default_factory=datetime.now)
     execution_status: Optional[str] = None  # pending, running, completed, failed
     has_result: bool = False
+    # 执行监控扩展字段
+    current_phase: Optional[str] = None  # PREPARING, ANALYZING, EXECUTING, VALIDATING, COMPLETED, FAILED
+    progress: int = 0  # 0-100
+    steps: List[str] = Field(default_factory=list)  # 执行步骤列表
+    logs: List[str] = Field(default_factory=list)  # 实时日志
     
     def to_markdown(self) -> str:
         criteria = "\n".join(f"- [ ] {c}" for c in self.clarification.acceptance_criteria) or "- [ ] 待定义"

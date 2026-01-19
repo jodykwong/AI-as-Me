@@ -1,19 +1,19 @@
 {
   "pattern_id": "pattern-2",
-  "description": "\u901a\u7528\u540d\u4e0e\u7279\u5b9aID\u6df7\u5408\u547d\u540d\u6a21\u5f0f",
+  "description": "\u4efb\u52a1\u6267\u884c\u7f3a\u4e4f\u5de5\u5177\u6807\u8bc6\u4e0e\u7ed3\u679c\u591a\u6837\u6027",
   "frequency": 10,
   "source_tasks": [
-    "<ai_as_me.kanban.manager.Task object at 0xffffba4e1d20>",
-    "<ai_as_me.kanban.manager.Task object at 0xffffba4e3250>",
-    "<ai_as_me.kanban.manager.Task object at 0xffffa694a920>",
-    "<ai_as_me.kanban.manager.Task object at 0xffff9d4e2200>",
-    "<ai_as_me.kanban.manager.Task object at 0xffffa6191360>",
-    "<ai_as_me.kanban.manager.Task object at 0xffffa694ab60>",
-    "<ai_as_me.kanban.manager.Task object at 0xffffa6191030>",
-    "<ai_as_me.kanban.manager.Task object at 0xffff9d4e1030>",
-    "<ai_as_me.kanban.manager.Task object at 0xffff9d4e0f70>",
-    "<ai_as_me.kanban.manager.Task object at 0xffffa5b47760>"
+    "<ai_as_me.kanban.manager.Task object at 0xffffa48256c0>",
+    "<ai_as_me.kanban.manager.Task object at 0xffffa4e2e0b0>",
+    "<ai_as_me.kanban.manager.Task object at 0xffffa46753f0>",
+    "<ai_as_me.kanban.manager.Task object at 0xffffa4827df0>",
+    "<ai_as_me.kanban.manager.Task object at 0xffffa4675210>",
+    "<ai_as_me.kanban.manager.Task object at 0xffffa40afbb0>",
+    "<ai_as_me.kanban.manager.Task object at 0xffffa407d330>",
+    "<ai_as_me.kanban.manager.Task object at 0xffffa4e2e950>",
+    "<ai_as_me.kanban.manager.Task object at 0xffffa4674fa0>",
+    "<ai_as_me.kanban.manager.Task object at 0xffffa402bcd0>"
   ],
-  "confidence": 0.8,
-  "category": "\u4efb\u52a1\u547d\u540d"
+  "confidence": 0.9,
+  "category": "\u7cfb\u7edf\u6a21\u5f0f"
 }

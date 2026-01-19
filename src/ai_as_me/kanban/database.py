@@ -507,3 +507,17 @@ def migrate_from_files(kanban_dir: Path, db: KanbanDB):
             db.update_task_status(task.id, status_map[col])
             
             print(f"  Migrated: {f.name} → {status_map[col].value}")
+    def update_task_phase(self, task_id: str, phase: str, progress: int = None):
+        """更新任务执行阶段和进度"""
+        with sqlite3.connect(self.db_path) as conn:
+            if progress is not None:
+                conn.execute(
+                    "UPDATE tasks SET current_phase = ?, progress = ? WHERE id = ?",
+                    (phase, progress, task_id)
+                )
+            else:
+                conn.execute(
+                    "UPDATE tasks SET current_phase = ? WHERE id = ?",
+                    (phase, task_id)
+                )
+            conn.commit()

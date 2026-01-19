@@ -1,5 +1,14 @@
 function kanbanApp() {
     console.log('kanbanApp called');
+    
+    // 配置常量
+    const CONFIG = {
+        AGENT_STATUS_REFRESH_INTERVAL: 5000,  // 5秒
+        DOING_TASKS_REFRESH_INTERVAL: 10000,  // 10秒
+        EXECUTION_PANEL_WIDTH: '396px',
+        DRAG_ANIMATION_DURATION: 150
+    };
+    
     const app = {
         board: { inbox: [], todo: [], doing: [], done: [] },
         agentStatus: null,
@@ -11,7 +20,7 @@ function kanbanApp() {
         showExecutionStatus: false,
         showTaskModal: false,
         editMode: false,
-        editTask: null,
+        editTask: { description: '', priority: 'P2' },
         executionLog: null,
         currentTask: null,
         currentTaskDetail: null,
@@ -30,9 +39,105 @@ function kanbanApp() {
             this.board = { inbox: [], todo: [], doing: [], done: [] };
             await this.loadBoard();
             await this.loadAgentStatus();
-            // 定期刷新Agent状态和看板
-            setInterval(() => this.loadAgentStatus(), 5000);
-            setInterval(() => this.loadBoard(), 5000);
+            // 定期刷新Agent状态（不刷新看板，避免干扰用户操作）
+            setInterval(() => this.loadAgentStatus(), CONFIG.AGENT_STATUS_REFRESH_INTERVAL);
+            // 仅刷新doing任务状态（轻量级）
+            setInterval(() => this.refreshDoingTasks(), CONFIG.DOING_TASKS_REFRESH_INTERVAL);
+            // 初始化拖拽功能
+            this.$nextTick(() => this.initDragDrop());
+        },
+        
+        /**
+         * 初始化拖拽功能
+         * 使用SortableJS为每个看板列启用拖拽
+         * 拖拽完成后自动调用API更新任务状态
+         */
+        initDragDrop() {
+            const statuses = ['inbox', 'todo', 'doing', 'done'];
+            statuses.forEach(status => {
+                const el = document.getElementById(`${status}-list`);
+                if (el) {
+                    new Sortable(el, {
+                        group: 'kanban',  // 允许跨列拖拽
+                        animation: CONFIG.DRAG_ANIMATION_DURATION,
+                        ghostClass: 'sortable-ghost',  // 拖拽时的半透明样式
+                        dragClass: 'sortable-drag',
+                        onEnd: async (evt) => {
+                            const taskId = evt.item.dataset.id;
+                            const newStatus = evt.to.dataset.status;
+                            const oldStatus = evt.from.dataset.status;
+                            
+                            if (taskId && newStatus) {
+                                try {
+                                    await this.moveTask(taskId, newStatus);
+                                } catch (error) {
+                                    // 回滚: 移回原位置
+                                    this.error = `移动失败: ${error.message}`;
+                                    // 重新加载看板恢复状态
+                                    await this.loadBoard();
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+        },
+        
+        /**
+         * 删除任务
+         * 显示确认对话框后调用API删除
+         * @param {string} taskId - 任务ID
+         */
+        async deleteTask(taskId) {
+            if (!confirm('确定要删除这个任务吗？')) return;
+            
+            try {
+                const res = await fetch(`/api/kanban/tasks/${taskId}`, {
+                    method: 'DELETE'
+                });
+                if (res.ok) {
+                    await this.loadBoard();
+                } else {
+                    this.error = '删除失败';
+                }
+            } catch (e) {
+                this.error = e.message;
+            }
+        },
+        
+        /**
+         * 刷新doing任务状态
+         * 仅在有doing任务时执行，避免不必要的API调用
+         * 只更新doing列表，不影响其他列的用户操作
+         */
+        async refreshDoingTasks() {
+            // 仅在有doing任务时刷新
+            if ((this.board.doing || []).length > 0) {
+                try {
+                    const res = await fetch('/api/kanban/board');
+                    if (res.ok) {
+                        const data = await res.json();
+                        // 只更新doing列表，不影响其他列
+                        this.board.doing = data.doing || [];
+                    }
+                } catch (e) {
+                    console.error('Failed to refresh doing tasks:', e);
+                }
+            }
+        },
+        
+        getPhaseInfo(task) {
+            const phases = {
+                'PREPARING': { label: '准备中', color: 'yellow', icon: '🟡', bgClass: 'bg-yellow-50 border-yellow-200', textClass: 'text-yellow-700', progress: 10 },
+                'ANALYZING': { label: '分析中', color: 'blue', icon: '🔵', bgClass: 'bg-blue-50 border-blue-200', textClass: 'text-blue-700', progress: 30 },
+                'EXECUTING': { label: '执行中', color: 'purple', icon: '🟣', bgClass: 'bg-purple-50 border-purple-200', textClass: 'text-purple-700', progress: 70 },
+                'VALIDATING': { label: '验证中', color: 'indigo', icon: '🔷', bgClass: 'bg-indigo-50 border-indigo-200', textClass: 'text-indigo-700', progress: 90 },
+                'COMPLETED': { label: '已完成', color: 'green', icon: '🟢', bgClass: 'bg-green-50 border-green-200', textClass: 'text-green-700', progress: 100 },
+                'FAILED': { label: '失败', color: 'red', icon: '🔴', bgClass: 'bg-red-50 border-red-200', textClass: 'text-red-700', progress: 0 }
+            };
+            
+            const phase = task.current_phase || (task.has_result ? 'COMPLETED' : 'EXECUTING');
+            return phases[phase] || phases['EXECUTING'];
         },
         
         getExecutionDuration(task) {
@@ -40,6 +145,8 @@ function kanbanApp() {
             const start = new Date(task.updated_at);
             const now = new Date();
             const diff = Math.floor((now - start) / 1000);
+            // 处理负数情况（时间异常）
+            if (diff < 0) return '刚刚';
             if (diff < 60) return `${diff}秒`;
             if (diff < 3600) return `${Math.floor(diff / 60)}分钟`;
             return `${Math.floor(diff / 3600)}小时`;
@@ -201,11 +308,35 @@ function kanbanApp() {
                     this.celebrate();
                 }
                 
-                await this.loadBoard();
+                // 立即更新本地状态，避免重新加载整个看板
+                this.updateLocalTaskStatus(taskId, toStatus);
             } catch (e) {
                 this.error = e.message;
+                // 只在出错时重新加载
+                await this.loadBoard();
             } finally {
                 this.loading = false;
+            }
+        },
+
+        updateLocalTaskStatus(taskId, newStatus) {
+            // 从所有列表中找到并移动任务
+            let task = null;
+            const statuses = ['inbox', 'todo', 'doing', 'done'];
+            
+            // 找到任务并从原列表移除
+            for (const status of statuses) {
+                const index = this.board[status].findIndex(t => t.id === taskId);
+                if (index !== -1) {
+                    task = this.board[status].splice(index, 1)[0];
+                    break;
+                }
+            }
+            
+            // 添加到新列表
+            if (task) {
+                task.status = newStatus.toUpperCase();
+                this.board[newStatus].push(task);
             }
         },
 

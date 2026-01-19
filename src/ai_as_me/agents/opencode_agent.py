@@ -26,7 +26,7 @@ class OpenCodeAgent(BaseAgent):
         prompt = self._build_prompt(task)
 
         # 如果指定了模型，添加到命令中
-        result = self._cli.call('opencode', prompt, timeout=300, model=model)
+        result = self._cli.call('opencode', prompt, timeout=60, model=model)  # 减少超时时间
         duration = time.time() - start
 
         return AgentResult(

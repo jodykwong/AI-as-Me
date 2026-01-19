@@ -25,6 +25,9 @@ class AgentExecutor:
         """
         import time
         start_time = time.time()
+        
+        # 更新任务状态为准备中
+        self._update_task_phase(task, "PREPARING", 10)
 
         # 解析 agent 和 model
         model = None
@@ -39,12 +42,16 @@ class AgentExecutor:
             else:
                 agent_name = tool_config
 
+        # 更新任务状态为分析中
+        self._update_task_phase(task, "ANALYZING", 30)
+
         if agent_name:
             agent = self.registry.get(agent_name)
             if not agent:
                 available_agents = self.registry.list_all()
                 error_msg = f'Agent "{agent_name}" 不存在。可用的 Agents: {", ".join(available_agents)}'
                 self.logger.error(error_msg)
+                self._update_task_phase(task, "FAILED", 0)
                 return AgentResult(
                     success=False,
                     output='',
@@ -82,12 +89,24 @@ class AgentExecutor:
         model_info = f" [模型: {model}]" if model else ""
         self.logger.info(f"执行任务 {task_id} 使用 Agent: {agent.name}{model_info}")
 
+        # 更新任务状态为执行中
+        self._update_task_phase(task, "EXECUTING", 50)
+        
         result = agent.execute(task, model=model)
+
+        # 更新任务状态为验证中
+        self._update_task_phase(task, "VALIDATING", 90)
 
         # 增强元数据
         result.metadata['model'] = model
         result.metadata['task_id'] = task_id
         result.metadata['timestamp'] = start_time
+
+        # 根据结果更新最终状态
+        if result.success:
+            self._update_task_phase(task, "COMPLETED", 100)
+        else:
+            self._update_task_phase(task, "FAILED", 0)
 
         self.logger.info(f"任务 {task_id} {'成功' if result.success else '失败'} (耗时: {result.duration:.2f}s)")
         return result
@@ -141,3 +160,11 @@ class AgentExecutor:
             duration=0,
             metadata={'attempts': attempts}
         )
+    def _update_task_phase(self, task, phase: str, progress: int = None):
+        """更新任务执行阶段和进度"""
+        try:
+            from ..kanban.database import KanbanDatabase
+            db = KanbanDatabase()
+            db.update_task_phase(task.id, phase, progress)
+        except Exception as e:
+            self.logger.warning(f"更新任务阶段失败: {e}")
