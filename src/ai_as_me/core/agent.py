@@ -144,37 +144,8 @@ class Agent:
 
     def _format_result_metadata(self, result) -> str:
         """格式化执行结果的元数据部分."""
-        import json
-        from datetime import datetime
-
-        metadata = result.metadata or {}
-        timestamp = metadata.get('timestamp', time.time())
-        dt = datetime.fromtimestamp(timestamp)
-
-        # 构建元数据表格
-        lines = [
-            "## 执行信息",
-            "",
-            "| 项目 | 值 |",
-            "|------|-----|",
-            f"| **状态** | ✅ 成功 |" if result.success else f"| **状态** | ❌ 失败 |",
-            f"| **Agent** | `{result.agent_name}` |",
-            f"| **模型** | `{metadata.get('model', 'N/A')}` |",
-            f"| **执行时间** | {dt.strftime('%Y-%m-%d %H:%M:%S')} |",
-            f"| **耗时** | {result.duration:.2f}s |",
-        ]
-
-        if result.error:
-            lines.append(f"| **错误** | {result.error} |")
-
-        if metadata.get('returncode') is not None:
-            lines.append(f"| **返回码** | {metadata['returncode']} |")
-
-        if metadata.get('tool'):
-            lines.append(f"| **工具** | `{metadata['tool']}` |")
-
-        lines.extend(["", "---", ""])
-        return "\n".join(lines)
+        from ai_as_me.utils.result_formatter import format_result_metadata
+        return format_result_metadata(result)
 
     def _capture_inspiration(self, task_id: str, success: bool, detail: str):
         """统一的灵感捕获方法."""

@@ -183,22 +183,21 @@ class VibeKanbanManager:
             result = executor.execute_with_fallback(task)
         
         # 保存结果
+        from ..utils.result_formatter import format_result_metadata
+
         result_file = self.kanban_dir / "doing" / f"{task_id}-result.md"
-        result_content = f"""# 执行结果
+        metadata_section = format_result_metadata(result)
+        result_content = f"""# {task.title}
 
-**任务**: {task.title}
-**Agent**: {result.agent_name}
-**状态**: {'成功' if result.success else '失败'}
-**耗时**: {result.duration:.1f}s
+{metadata_section}
 
-## 输出
+## 执行结果
 
 {result.output}
-
-## 错误
-
-{result.error if result.error else '无'}
 """
+        if result.error:
+            result_content += f"\n## 错误\n\n{result.error}\n"
+
         result_file.write_text(result_content, encoding='utf-8')
         
         # 触发进化

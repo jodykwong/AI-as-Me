@@ -3,6 +3,7 @@ import click
 import sys
 import subprocess
 import asyncio
+import time
 from pathlib import Path
 import os
 from ai_as_me import __version__
@@ -936,30 +937,46 @@ def start(task_id, tool, fallback, no_soul):
         result = agent.call(tool, task['description'], timeout=10, use_soul=use_soul)
     
     # 保存结果
+    from ai_as_me.utils.result_formatter import format_result_metadata
+
     results_dir = Path.cwd() / "kanban" / "results"
     results_dir.mkdir(exist_ok=True)
     result_file = results_dir / f"{task_id}.md"
-    
+
+    # 补充结果中缺失的信息
+    result['tool'] = result.get('tool', tool)
+    result['timestamp'] = time.time()
+
+    metadata_section = format_result_metadata(result)
+
     result_content = f"""# 任务执行结果
 
-**任务ID**: {task_id}
-**描述**: {task['description']}
-**工具**: {result.get('tool', tool)}
-**Soul注入**: {'是' if use_soul else '否'}
-**状态**: {'成功' if result['success'] else '失败'}
+{metadata_section}
+
+## 基本信息
+
+| 项目 | 值 |
+|------|-----|
+| **任务ID** | {task_id} |
+| **描述** | {task['description']} |
+| **Soul注入** | {'是' if use_soul else '否'} |
 
 ## 输出
 
 ```
-{result['output'] or '无输出'}
+{result.get('output') or '无输出'}
 ```
+"""
 
+    if result.get('error'):
+        result_content += f"""
 ## 错误信息
 
 ```
-{result['error'] or '无错误'}
+{result['error']}
 ```
 """
+
     result_file.write_text(result_content)
     
     # 更新最终状态
