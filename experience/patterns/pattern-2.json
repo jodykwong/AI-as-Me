@@ -1,0 +1,19 @@
+{
+  "pattern_id": "pattern-2",
+  "description": "\u901a\u7528\u540d\u4e0e\u7279\u5b9aID\u6df7\u5408\u547d\u540d\u6a21\u5f0f",
+  "frequency": 10,
+  "source_tasks": [
+    "<ai_as_me.kanban.manager.Task object at 0xffffba4e1d20>",
+    "<ai_as_me.kanban.manager.Task object at 0xffffba4e3250>",
+    "<ai_as_me.kanban.manager.Task object at 0xffffa694a920>",
+    "<ai_as_me.kanban.manager.Task object at 0xffff9d4e2200>",
+    "<ai_as_me.kanban.manager.Task object at 0xffffa6191360>",
+    "<ai_as_me.kanban.manager.Task object at 0xffffa694ab60>",
+    "<ai_as_me.kanban.manager.Task object at 0xffffa6191030>",
+    "<ai_as_me.kanban.manager.Task object at 0xffff9d4e1030>",
+    "<ai_as_me.kanban.manager.Task object at 0xffff9d4e0f70>",
+    "<ai_as_me.kanban.manager.Task object at 0xffffa5b47760>"
+  ],
+  "confidence": 0.8,
+  "category": "\u4efb\u52a1\u547d\u540d"
+}

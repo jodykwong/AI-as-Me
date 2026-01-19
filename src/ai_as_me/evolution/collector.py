@@ -32,10 +32,36 @@ class ExperienceCollector:
     
     def collect(self, task, result: str, success: bool, duration: float = 0) -> Experience:
         """收集任务执行经验"""
+        # 安全获取task属性
+        if hasattr(task, 'id'):
+            task_id = task.id
+        elif isinstance(task, dict):
+            task_id = task.get('id', 'unknown')
+        else:
+            task_id = str(task)
+        
+        if hasattr(task, 'description'):
+            description = task.description
+        elif hasattr(task, 'title'):
+            description = task.title
+        elif isinstance(task, dict):
+            description = task.get('description') or task.get('title', str(task))
+        else:
+            description = str(task)
+        
+        if hasattr(task, 'tool'):
+            tool_used = task.tool
+        elif hasattr(task, 'clarification') and hasattr(task.clarification, 'tool'):
+            tool_used = task.clarification.tool or 'unknown'
+        elif isinstance(task, dict):
+            tool_used = task.get('tool', 'unknown')
+        else:
+            tool_used = 'unknown'
+        
         exp = Experience(
-            task_id=getattr(task, 'id', str(task)),
-            description=getattr(task, 'description', str(task))[:200],
-            tool_used=getattr(task, 'tool', 'unknown'),
+            task_id=task_id,
+            description=str(description)[:200] if description else 'No description',
+            tool_used=str(tool_used) if tool_used else 'unknown',
             result=result[:500],
             success=success,
             duration=duration,

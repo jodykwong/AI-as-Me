@@ -8,6 +8,7 @@ function kanbanApp() {
         showClarifyModal: false,
         showCelebration: false,
         showExecutionModal: false,
+        showExecutionStatus: false,
         showTaskModal: false,
         editMode: false,
         editTask: null,
@@ -29,8 +30,23 @@ function kanbanApp() {
             this.board = { inbox: [], todo: [], doing: [], done: [] };
             await this.loadBoard();
             await this.loadAgentStatus();
-            // 定期刷新Agent状态
+            // 定期刷新Agent状态和看板
             setInterval(() => this.loadAgentStatus(), 5000);
+            setInterval(() => this.loadBoard(), 5000);
+        },
+        
+        getExecutionDuration(task) {
+            if (!task.updated_at) return '未知';
+            const start = new Date(task.updated_at);
+            const now = new Date();
+            const diff = Math.floor((now - start) / 1000);
+            if (diff < 60) return `${diff}秒`;
+            if (diff < 3600) return `${Math.floor(diff / 60)}分钟`;
+            return `${Math.floor(diff / 3600)}小时`;
+        },
+        
+        async refreshTaskStatus(taskId) {
+            await this.loadBoard();
         },
 
         async loadAgentStatus() {
