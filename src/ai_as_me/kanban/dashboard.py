@@ -2,6 +2,7 @@
 Enhanced Dashboard with SSE and Database Backend
 Inspired by Vibe-Kanban
 """
+
 import json
 import asyncio
 from pathlib import Path
@@ -13,11 +14,12 @@ try:
     from fastapi.responses import HTMLResponse, StreamingResponse
     from pydantic import BaseModel
     import uvicorn
+
     HAS_FASTAPI = True
 except ImportError:
     HAS_FASTAPI = False
 
-from .database import KanbanDB, TaskStatus, ExecutionStatus
+from .database import KanbanDB, TaskStatus
 
 
 class CreateTaskRequest(BaseModel):
@@ -35,95 +37,100 @@ def create_app(db_path: Path, soul_dir: Path = None):
     """Create FastAPI app with database backend."""
     if not HAS_FASTAPI:
         raise ImportError("pip install fastapi uvicorn pydantic")
-    
+
     app = FastAPI(title="AI-as-Me Kanban")
     db = KanbanDB(db_path)
-    
+
     # SSE state tracking
     _last_stats = {}
-    
+
     @app.get("/api/stats")
     async def get_stats():
         return db.get_stats()
-    
+
     @app.get("/api/tasks")
     async def list_tasks(status: str = None):
         if status:
             return [t.to_dict() for t in db.list_tasks(TaskStatus(status))]
         return [t.to_dict() for t in db.list_tasks()]
-    
+
     @app.post("/api/tasks")
     async def create_task(req: CreateTaskRequest):
         task = db.create_task(req.title, req.description, req.needs_approval)
         return task.to_dict()
-    
+
     @app.get("/api/tasks/{task_id}")
     async def get_task(task_id: str):
         task = db.get_task(task_id)
         if not task:
             raise HTTPException(404, "Task not found")
         return task.to_dict()
-    
+
     @app.patch("/api/tasks/{task_id}")
     async def update_task(task_id: str, req: UpdateTaskRequest):
         task = db.get_task(task_id)
         if not task:
             raise HTTPException(404, "Task not found")
-        
+
         if req.status:
             db.update_task_status(task_id, TaskStatus(req.status))
         if req.approved:
             db.approve_task(task_id)
-        
+
         return db.get_task(task_id).to_dict()
-    
+
     @app.delete("/api/tasks/{task_id}")
     async def delete_task(task_id: str):
         db.delete_task(task_id)
         return {"ok": True}
-    
+
     @app.post("/api/tasks/{task_id}/approve")
     async def approve_task(task_id: str):
         db.approve_task(task_id)
         return {"ok": True}
-    
+
     @app.get("/api/tasks/{task_id}/executions")
     async def get_executions(task_id: str):
         exec = db.get_latest_execution(task_id)
         return exec.to_dict() if exec else None
-    
+
     @app.get("/api/rules")
     async def get_rules():
         return db.get_rules()
-    
+
     @app.get("/api/stream")
     async def stream_updates():
         """SSE endpoint for real-time updates."""
+
         async def event_generator() -> AsyncGenerator[str, None]:
             nonlocal _last_stats
             while True:
                 stats = db.get_stats()
                 tasks = [t.to_dict() for t in db.list_tasks()]
-                
-                data = {"stats": stats, "tasks": tasks, "ts": datetime.now().isoformat()}
-                
+
+                data = {
+                    "stats": stats,
+                    "tasks": tasks,
+                    "ts": datetime.now().isoformat(),
+                }
+
                 if data != _last_stats:
                     yield f"data: {json.dumps(data)}\n\n"
                     _last_stats = data
-                
+
                 await asyncio.sleep(1)
-        
+
         return StreamingResponse(
             event_generator(),
             media_type="text/event-stream",
-            headers={"Cache-Control": "no-cache", "Connection": "keep-alive"}
+            headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
         )
-    
+
     @app.get("/", response_class=HTMLResponse)
     async def index():
         stats = db.get_stats()
-        
-        return f'''<!DOCTYPE html>
+
+        return f"""<!DOCTYPE html>
 <html><head>
 <title>AI-as-Me Kanban</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -318,8 +325,8 @@ fetch('/api/tasks').then(r => r.json()).then(tasks => {{
   }});
 }});
 </script>
-</body></html>'''
-    
+</body></html>"""
+
     return app
 
 

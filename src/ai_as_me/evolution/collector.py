@@ -1,4 +1,5 @@
 """Experience Collector - Story 1.1"""
+
 from dataclasses import dataclass, asdict
 from datetime import datetime
 from pathlib import Path
@@ -14,10 +15,10 @@ class Experience:
     success: bool
     duration: float
     timestamp: datetime
-    
+
     def to_dict(self):
         d = asdict(self)
-        d['timestamp'] = self.timestamp.isoformat()
+        d["timestamp"] = self.timestamp.isoformat()
         return d
 
 
@@ -29,54 +30,57 @@ class ExperienceCollector:
         self.failures_dir = experience_dir / "failures"
         self.successes_dir.mkdir(parents=True, exist_ok=True)
         self.failures_dir.mkdir(parents=True, exist_ok=True)
-    
-    def collect(self, task, result: str, success: bool, duration: float = 0) -> Experience:
+
+    def collect(
+        self, task, result: str, success: bool, duration: float = 0
+    ) -> Experience:
         """收集任务执行经验"""
         # 安全获取task属性
-        if hasattr(task, 'id'):
+        if hasattr(task, "id"):
             task_id = task.id
         elif isinstance(task, dict):
-            task_id = task.get('id', 'unknown')
+            task_id = task.get("id", "unknown")
         else:
             task_id = str(task)
-        
-        if hasattr(task, 'description'):
+
+        if hasattr(task, "description"):
             description = task.description
-        elif hasattr(task, 'title'):
+        elif hasattr(task, "title"):
             description = task.title
         elif isinstance(task, dict):
-            description = task.get('description') or task.get('title', str(task))
+            description = task.get("description") or task.get("title", str(task))
         else:
             description = str(task)
-        
-        if hasattr(task, 'tool'):
+
+        if hasattr(task, "tool"):
             tool_used = task.tool
-        elif hasattr(task, 'clarification') and hasattr(task.clarification, 'tool'):
-            tool_used = task.clarification.tool or 'unknown'
+        elif hasattr(task, "clarification") and hasattr(task.clarification, "tool"):
+            tool_used = task.clarification.tool or "unknown"
         elif isinstance(task, dict):
-            tool_used = task.get('tool', 'unknown')
+            tool_used = task.get("tool", "unknown")
         else:
-            tool_used = 'unknown'
-        
+            tool_used = "unknown"
+
         exp = Experience(
             task_id=task_id,
-            description=str(description)[:200] if description else 'No description',
-            tool_used=str(tool_used) if tool_used else 'unknown',
+            description=str(description)[:200] if description else "No description",
+            tool_used=str(tool_used) if tool_used else "unknown",
             result=result[:500],
             success=success,
             duration=duration,
-            timestamp=datetime.now()
+            timestamp=datetime.now(),
         )
-        
+
         # 保存到文件
         target_dir = self.successes_dir if success else self.failures_dir
         file_path = target_dir / f"{exp.task_id}.json"
         file_path.write_text(json.dumps(exp.to_dict(), indent=2))
-        
+
         # 索引到向量存储
         if self.vector_store:
             try:
                 from ai_as_me.rag.retriever import TaskExperience
+
                 rag_exp = TaskExperience(
                     task_id=exp.task_id,
                     description=exp.description,
@@ -84,30 +88,30 @@ class ExperienceCollector:
                     result_summary=exp.result,
                     success=exp.success,
                     user_feedback=None,
-                    created_at=exp.timestamp
+                    created_at=exp.timestamp,
                 )
                 self.vector_store.add(rag_exp)
             except Exception as e:
                 print(f"Warning: Failed to index to vector store: {e}")
-        
+
         return exp
-    
+
     def get_recent(self, limit: int = 10) -> list[Experience]:
         """获取最近的经验"""
         all_files = sorted(
-            list(self.successes_dir.glob("*.json")) + 
-            list(self.failures_dir.glob("*.json")),
+            list(self.successes_dir.glob("*.json"))
+            + list(self.failures_dir.glob("*.json")),
             key=lambda p: p.stat().st_mtime,
-            reverse=True
+            reverse=True,
         )
-        
+
         experiences = []
         for f in all_files[:limit]:
             try:
                 data = json.loads(f.read_text())
-                data['timestamp'] = datetime.fromisoformat(data['timestamp'])
+                data["timestamp"] = datetime.fromisoformat(data["timestamp"])
                 experiences.append(Experience(**data))
             except Exception:
                 continue
-        
+
         return experiences

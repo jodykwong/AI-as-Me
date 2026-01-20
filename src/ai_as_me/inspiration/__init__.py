@@ -8,7 +8,7 @@ from .converter import InspirationConverter
 
 __all__ = [
     "Inspiration",
-    "InspirationPool", 
+    "InspirationPool",
     "InspirationCapturer",
     "InspirationIncubator",
     "InspirationConverter",

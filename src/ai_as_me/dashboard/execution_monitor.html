@@ -1,102 +1,4 @@
-"""FastAPI 应用主入口."""
-
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-from pathlib import Path
-
-app = FastAPI(
-    title="AI-as-Me Dashboard",
-    version="3.4.2",
-    description="AI-as-Me 灵感管理与规则配置 Dashboard API",
-    docs_url="/api/docs",
-    redoc_url="/api/redoc",
-)
-
-# CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# 注册 API 路由（顺序很重要！）
-from .api import inspirations, rules, stats, logs, kanban, soul, agent_status
-
-app.include_router(agent_status.router, prefix="/api", tags=["agent"])
-app.include_router(kanban.router, prefix="/api", tags=["kanban"])
-app.include_router(soul.router, prefix="/api", tags=["soul"])
-app.include_router(rules.router, prefix="/api", tags=["rules"])
-app.include_router(stats.router, prefix="/api", tags=["stats"])
-app.include_router(logs.router, prefix="/api", tags=["logs"])
-app.include_router(
-    inspirations.router, prefix="/api", tags=["inspirations"]
-)  # 最后注册，避免路径冲突
-
-# 静态文件
-static_dir = Path(__file__).parent / "static"
-if static_dir.exists():
-    app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
-
-
-@app.get("/health")
-async def health_check():
-    """健康检查."""
-    return {"status": "ok", "version": "3.4.0"}
-
-
-@app.get("/")
-async def index():
-    """首页."""
-    return FileResponse(static_dir / "index.html")
-
-
-@app.get("/inspirations.html")
-async def inspirations_page():
-    """灵感池页面."""
-    return FileResponse(static_dir / "inspirations.html")
-
-
-@app.get("/rules.html")
-async def rules_page():
-    """规则管理页面."""
-    return FileResponse(static_dir / "rules.html")
-
-
-@app.get("/stats.html")
-async def stats_page():
-    """统计图表页面."""
-    return FileResponse(static_dir / "stats.html")
-
-
-@app.get("/soul.html")
-async def soul_page():
-    """Soul 状态页面."""
-    return FileResponse(static_dir / "soul.html")
-
-
-@app.get("/kanban.html")
-async def kanban_page():
-    """Kanban 看板页面."""
-    return FileResponse(static_dir / "kanban.html")
-
-
-@app.get("/logs.html")
-async def logs_page():
-    """日志查看器页面."""
-    return FileResponse(static_dir / "logs.html")
-
-
-@app.get("/monitor")
-async def execution_monitor():
-    """执行监控页面"""
-    from datetime import datetime
-
-    html = (
-        """<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
     <title>执行监控 - AI-as-Me</title>
@@ -126,7 +28,7 @@ async def execution_monitor():
     <div class="monitor-panel">
         <div class="task-header">
             <h1 class="task-title" id="taskTitle">任务执行监控</h1>
-            <div class="task-meta" id="taskMeta">实时监控AI执行过程</div>
+            <div class="task-meta" id="taskMeta">等待任务数据...</div>
         </div>
         
         <div class="log-panel">
@@ -134,17 +36,14 @@ async def execution_monitor():
                 <h3>实时执行日志</h3>
                 <div class="log-controls">
                     <input type="text" class="search-box" placeholder="搜索日志..." id="searchBox">
-                    <button class="btn active" id="autoScrollBtn">自动滚动</button>
+                    <button class="btn" id="autoScrollBtn">自动滚动</button>
                     <button class="btn" id="pauseBtn">暂停更新</button>
                     <button class="btn" id="clearBtn">清空</button>
                 </div>
             </div>
             <div class="log-content" id="logContent">
                 <div class="log-entry">
-                    <span class="log-timestamp">["""
-        + datetime.now().strftime("%H:%M:%S")
-        + """]</span>
-                    <span class="log-step">执行监控系统已启动，等待任务执行...</span>
+                    <span class="log-timestamp">等待日志数据...</span>
                 </div>
             </div>
         </div>
@@ -153,7 +52,7 @@ async def execution_monitor():
     <script>
         class ExecutionMonitor {
             constructor() {
-                this.taskId = new URLSearchParams(window.location.search).get('task_id') || 'demo';
+                this.taskId = new URLSearchParams(window.location.search).get('task_id') || 'test';
                 this.autoScroll = true;
                 this.paused = false;
                 this.lastTimestamp = null;
@@ -195,7 +94,7 @@ async def execution_monitor():
             
             clearLogs() {
                 this.logs = [];
-                this.logContent.innerHTML = '<div class="log-entry"><span class="log-timestamp">[' + new Date().toLocaleTimeString() + ']</span><span class="log-step">日志已清空</span></div>';
+                this.logContent.innerHTML = '<div class="log-entry"><span class="log-timestamp">日志已清空</span></div>';
             }
             
             filterLogs() {
@@ -260,35 +159,12 @@ async def execution_monitor():
             
             startPolling() {
                 this.fetchLogs();
-                setInterval(() => this.fetchLogs(), 2000);
+                setInterval(() => this.fetchLogs(), 2000); // 每2秒轮询
             }
         }
         
+        // 启动监控
         new ExecutionMonitor();
     </script>
 </body>
-</html>"""
-    )
-    return html
-
-
-@app.get("/api/tasks/{task_id}/execution-log")
-async def get_execution_log(
-    task_id: str, since_timestamp: str = None, limit: int = 100
-):
-    """获取任务执行日志"""
-    import sys
-    import os
-
-    sys.path.append("/home/sunrise/AI-as-Me/src")
-    from ai_as_me.execution_logger import ExecutionLogger
-
-    print(f"DEBUG: get_execution_log called for task_id: {task_id}")
-    logger = ExecutionLogger(task_id)
-    print(f"DEBUG: log_file: {logger.log_file}")
-    print(f"DEBUG: log_file exists: {os.path.exists(logger.log_file)}")
-
-    logs = logger.get_logs(since_timestamp, limit)
-    print(f"DEBUG: get_logs returned {len(logs)} entries")
-
-    return {"logs": logs}
+</html>

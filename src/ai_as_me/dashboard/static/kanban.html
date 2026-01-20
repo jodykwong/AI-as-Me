@@ -7,7 +7,7 @@
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-    <script src="/static/js/kanban.js?v=20260120060059"></script>
+    <script src="/static/js/kanban.js?v=20260120103500"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         [x-cloak] { display: none !important; }
@@ -251,6 +251,7 @@
                     </div>
                 </div>
                 
+                <!-- 实时日志面板 -->
                 <div class="p-4 overflow-y-auto max-h-[calc(100vh-200px)] bg-gray-50">
                     <!-- 空状态 -->
                     <div x-show="(board.doing || []).length === 0" class="text-center py-12">
@@ -259,80 +260,37 @@
                         <div class="text-xs text-gray-400 mt-2">任务将自动出现在这里</div>
                     </div>
                     
-                    <!-- 任务列表 -->
-                    <div x-show="(board.doing || []).length > 0" class="space-y-3">
-                        <template x-for="(task, index) in (board.doing || [])" :key="task.id">
-                            <div class="bg-white border-2 border-orange-300 rounded-lg p-4 hover:shadow-md transition-all cursor-pointer"
-                                 @click="showTask(task)">
-                                <!-- 任务头部 -->
-                                <div class="flex items-start justify-between mb-3">
-                                    <div class="flex-1 pr-2">
-                                        <div class="font-bold text-sm mb-1 text-gray-800 line-clamp-2" x-text="task.title"></div>
-                                        <div class="text-xs text-gray-500 font-mono" x-text="task.id"></div>
-                                    </div>
-                                    <span :class="getPriorityBadge(task.priority)" 
-                                          class="text-xs px-2 py-1 rounded font-bold flex-shrink-0" 
-                                          x-text="task.priority"></span>
-                                </div>
-                                
-                                <!-- 阶段指示器 + 进度条 -->
-                                <div class="mb-3">
-                                    <!-- 阶段标签 -->
-                                    <div class="mb-2 p-2 rounded border" 
-                                         :class="getPhaseInfo(task).bgClass">
-                                        <div class="flex items-center gap-2">
-                                            <span class="text-lg" x-text="getPhaseInfo(task).icon"></span>
-                                            <div class="flex-1">
-                                                <div class="font-bold text-xs" 
-                                                     :class="getPhaseInfo(task).textClass"
-                                                     x-text="getPhaseInfo(task).label"></div>
-                                                <div class="text-xs text-gray-600 mt-1">
-                                                    <span x-text="formatTime(task.updated_at)"></span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- 进度条 -->
-                                    <div class="bg-gray-200 rounded-full h-2 overflow-hidden">
-                                        <div class="h-full transition-all duration-500 rounded-full"
-                                             :class="task.has_result ? 'bg-green-500' : 'bg-blue-500'"
-                                             :style="`width: ${task.progress || (task.has_result ? 100 : 30)}%`"></div>
-                                    </div>
-                                    <div class="text-xs text-gray-500 mt-1 text-right">
-                                        <span x-text="`${task.progress || (task.has_result ? 100 : 30)}%`"></span>
-                                    </div>
-                                </div>
-                                
-                                <!-- 执行详情 -->
-                                <div class="space-y-2 text-xs">
-                                    <div class="flex items-center gap-2 p-2 bg-gray-50 rounded">
-                                        <span class="text-gray-500 font-medium w-12">工具:</span>
-                                        <code class="flex-1 bg-white px-2 py-1 rounded border text-xs font-mono" 
-                                              x-text="task.clarification?.tool || '未指定'"></code>
-                                    </div>
-                                    
-                                    <div class="flex items-center gap-2 p-2 bg-gray-50 rounded">
-                                        <span class="text-gray-500 font-medium w-12">耗时:</span>
-                                        <span class="flex-1 font-mono text-orange-600 font-bold" 
-                                              x-text="getExecutionDuration(task)"></span>
-                                    </div>
-                                </div>
-                                
-                                <!-- 操作按钮 -->
-                                <div class="mt-3 pt-3 border-t flex gap-2">
-                                    <button @click.stop="showTask(task)" 
-                                            class="flex-1 px-3 py-2 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center justify-center gap-1">
-                                        <span>📋</span>
-                                        <span>查看详情</span>
-                                    </button>
-                                    <button @click.stop="refreshTaskStatus(task.id)" 
-                                            class="px-3 py-2 bg-gray-600 text-white text-xs rounded-lg hover:bg-gray-700 transition-colors">
-                                        🔄
-                                    </button>
-                                </div>
+                    <!-- 自动显示第一个doing任务的日志 -->
+                    <div x-show="(board.doing || []).length > 0" class="space-y-2">
+                        <div class="flex justify-between items-center mb-2">
+                            <h4 class="font-bold text-sm">
+                                正在执行: <span x-text="getCurrentTask()?.title || '未知任务'"></span>
+                            </h4>
+                            <div class="flex gap-1">
+                                <button @click="toggleAutoScroll()" 
+                                        :class="autoScroll ? 'bg-blue-500 text-white' : 'bg-gray-200'"
+                                        class="px-2 py-1 text-xs rounded">
+                                    自动滚动
+                                </button>
+                                <button @click="clearLogs()" 
+                                        class="px-2 py-1 text-xs bg-red-500 text-white rounded">
+                                    清空
+                                </button>
                             </div>
-                        </template>
+                        </div>
+                        
+                        <!-- 日志内容 -->
+                        <div id="logContainer" class="bg-black text-green-400 p-3 rounded font-mono text-xs h-64 overflow-y-auto">
+                            <template x-for="log in executionLogs" :key="log.timestamp">
+                                <div class="mb-1">
+                                    <span class="text-gray-500" x-text="formatLogTime(log.timestamp)"></span>
+                                    <span :class="getLogTypeClass(log.type)" x-text="log.content"></span>
+                                </div>
+                            </template>
+                            <div x-show="executionLogs.length === 0" class="text-gray-500">
+                                等待执行日志...
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
@@ -341,7 +299,7 @@
                     <div class="flex items-center justify-between text-xs">
                         <div class="flex items-center gap-2">
                             <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                            <span class="text-gray-600">自动刷新: 5秒</span>
+                            <span class="text-gray-600">自动刷新: 2秒</span>
                         </div>
                         <div class="font-bold text-gray-700">
                             执行中: <span class="text-orange-600" x-text="(board.doing || []).length"></span>

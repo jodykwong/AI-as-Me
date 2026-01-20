@@ -1,4 +1,5 @@
 """执行结果格式化工具."""
+
 import time
 from datetime import datetime
 from typing import Dict, Any, Union
@@ -29,19 +30,31 @@ def format_result_metadata(result: Union[Dict, Any]) -> str:
     is_dict = isinstance(result, dict)
 
     # 提取元数据
-    success = result.get('success') if is_dict else result.success
-    agent_name = result.get('agent_name') if is_dict else getattr(result, 'agent_name', 'unknown')
-    error = result.get('error') if is_dict else (result.error if hasattr(result, 'error') else '')
-    duration = result.get('duration') if is_dict else (result.duration if hasattr(result, 'duration') else 0)
-    tool = result.get('tool')
+    success = result.get("success") if is_dict else result.success
+    agent_name = (
+        result.get("agent_name")
+        if is_dict
+        else getattr(result, "agent_name", "unknown")
+    )
+    error = (
+        result.get("error")
+        if is_dict
+        else (result.error if hasattr(result, "error") else "")
+    )
+    duration = (
+        result.get("duration")
+        if is_dict
+        else (result.duration if hasattr(result, "duration") else 0)
+    )
+    tool = result.get("tool")
 
     # 获取metadata字典
     if is_dict:
-        metadata = result.get('metadata', {})
-        timestamp = result.get('timestamp', time.time())
+        metadata = result.get("metadata", {})
+        timestamp = result.get("timestamp", time.time())
     else:
         metadata = result.metadata or {}
-        timestamp = metadata.get('timestamp', time.time())
+        timestamp = metadata.get("timestamp", time.time())
 
     dt = datetime.fromtimestamp(timestamp)
 
@@ -51,7 +64,7 @@ def format_result_metadata(result: Union[Dict, Any]) -> str:
         "",
         "| 项目 | 值 |",
         "|------|-----|",
-        f"| **状态** | ✅ 成功 |" if success else f"| **状态** | ❌ 失败 |",
+        "| **状态** | ✅ 成功 |" if success else "| **状态** | ❌ 失败 |",
         f"| **Agent** | `{agent_name}` |",
         f"| **模型** | `{metadata.get('model', 'N/A')}` |",
         f"| **执行时间** | {dt.strftime('%Y-%m-%d %H:%M:%S')} |",
@@ -61,11 +74,11 @@ def format_result_metadata(result: Union[Dict, Any]) -> str:
     if error:
         lines.append(f"| **错误** | {error} |")
 
-    if metadata.get('returncode') is not None:
+    if metadata.get("returncode") is not None:
         lines.append(f"| **返回码** | {metadata['returncode']} |")
 
-    if tool or metadata.get('tool'):
-        tool_name = tool or metadata.get('tool')
+    if tool or metadata.get("tool"):
+        tool_name = tool or metadata.get("tool")
         lines.append(f"| **工具** | `{tool_name}` |")
 
     lines.extend(["", "---", ""])

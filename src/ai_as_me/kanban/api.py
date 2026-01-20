@@ -1,4 +1,5 @@
 """Web 仪表板 API - Epic 6"""
+
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -63,9 +64,9 @@ class TaskResponse(BaseModel):
 async def health_check():
     """
     系统健康检查
-    
+
     返回系统当前状态和时间戳
-    
+
     Returns:
         - status: 系统状态 (ok)
         - timestamp: 当前时间戳
@@ -78,24 +79,25 @@ async def health_check():
 async def list_tasks(status: Optional[str] = None):
     """
     获取任务列表
-    
+
     Args:
         status: 可选，按状态过滤 (inbox/todo/doing/done)
-    
+
     Returns:
         任务列表数组
-    
+
     Example:
         GET /api/tasks?status=doing
     """
-    from ai_as_me.kanban.database import Database
-    
-    db = Database(DB_PATH)
+
+    from .postgres_db import get_database
+
+    db = get_database()
     tasks = db.get_all_tasks()
-    
+
     if status:
         tasks = [t for t in tasks if t.get("status") == status]
-    
+
     return [
         TaskResponse(
             id=t["id"],
@@ -103,28 +105,30 @@ async def list_tasks(status: Optional[str] = None):
             status=t["status"],
             tool=t.get("tool"),
             priority=t.get("priority", "P2"),
-            created_at=t.get("created_at", "")
+            created_at=t.get("created_at", ""),
         )
         for t in tasks
     ]
 
 
 # Story 6.3: 创建任务 (Story 12.2: 完善文档)
-@app.post("/api/tasks", tags=["Tasks"], summary="创建新任务", response_model=TaskResponse)
+@app.post(
+    "/api/tasks", tags=["Tasks"], summary="创建新任务", response_model=TaskResponse
+)
 async def create_task(task: TaskCreate):
     """
     创建新任务
-    
+
     系统会自动选择最适合的工具执行任务，也可手动指定工具。
-    
+
     Args:
         task: 任务创建请求
             - description: 任务描述 (必填，最长2000字符)
             - tool: 执行工具 (可选，不指定则自动选择)
-    
+
     Returns:
         创建的任务信息
-    
+
     Example:
         ```json
         {
@@ -136,34 +140,37 @@ async def create_task(task: TaskCreate):
     from ai_as_me.orchestrator.skill_matcher import SkillMatcher
     from ai_as_me.kanban.database import Database
     import uuid
-    
+
     db = Database(DB_PATH)
-    
+
     # 自动选择工具
     tool = task.tool
     if not tool:
         matcher = SkillMatcher(CONFIG_PATH, DB_PATH)
         tool = matcher.match(task.description)
-    
+
     # 创建任务
     task_id = str(uuid.uuid4())[:8]
     db.create_task(task_id, task.description, tool, task.priority)
-    
+
     # 发布事件
-    await event_bus.publish("task_created", {
-        "id": task_id,
-        "description": task.description,
-        "tool": tool,
-        "priority": task.priority
-    })
-    
+    await event_bus.publish(
+        "task_created",
+        {
+            "id": task_id,
+            "description": task.description,
+            "tool": tool,
+            "priority": task.priority,
+        },
+    )
+
     return TaskResponse(
         id=task_id,
         description=task.description,
         status="inbox",
         tool=tool,
         priority=task.priority,
-        created_at=datetime.now().isoformat()
+        created_at=datetime.now().isoformat(),
     )
 
 
@@ -172,20 +179,20 @@ async def create_task(task: TaskCreate):
 async def get_task(task_id: str):
     """获取任务详情"""
     from ai_as_me.kanban.database import Database
-    
+
     db = Database(DB_PATH)
     task = db.get_task(task_id)
-    
+
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-    
+
     return TaskResponse(
         id=task["id"],
         description=task["description"],
         status=task["status"],
         tool=task.get("tool"),
         priority=task.get("priority", "P2"),
-        created_at=task.get("created_at", "")
+        created_at=task.get("created_at", ""),
     )
 
 
@@ -194,19 +201,19 @@ async def get_task(task_id: str):
 async def get_task_history(task_id: str):
     """
     获取任务执行历史
-    
+
     返回任务的所有执行记录，包括成功率和执行时间
     """
     from ai_as_me.kanban.database import Database
-    
+
     db = Database(DB_PATH)
     history = db.get_task_history(task_id)
-    
+
     return {
         "task_id": task_id,
         "history": history,
         "total_executions": len(history),
-        "success_count": sum(1 for h in history if h.get("success"))
+        "success_count": sum(1 for h in history if h.get("success")),
     }
 
 
@@ -214,47 +221,41 @@ async def get_task_history(task_id: str):
 async def get_tool_stats(tool_name: str):
     """
     获取工具统计信息
-    
+
     返回工具的执行次数、成功率和平均执行时间
     """
     from ai_as_me.kanban.database import Database
-    
+
     db = Database(DB_PATH)
     stats = db.get_tool_stats(tool_name)
-    
-    return {
-        "tool_name": tool_name,
-        **stats
-    }
+
+    return {"tool_name": tool_name, **stats}
 
 
 @app.put("/api/tasks/{task_id}/status", tags=["Tasks"], summary="更新任务状态")
 async def update_status(task_id: str, status: str):
     """
     更新任务状态
-    
+
     Args:
         task_id: 任务ID
         status: 新状态 (inbox/todo/doing/done)
     """
     import re
     from ai_as_me.kanban.database import Database
-    
-    if not re.match(r'^[a-f0-9\-]{8,36}$', task_id):
+
+    if not re.match(r"^[a-f0-9\-]{8,36}$", task_id):
         raise HTTPException(status_code=400, detail="Invalid task ID")
     valid_statuses = ["inbox", "todo", "doing", "done"]
     if status not in valid_statuses:
         raise HTTPException(status_code=400, detail="Invalid status")
-    
+
     db = Database(DB_PATH)
     db.update_task_status(task_id, status)
-    
+
     # 发布事件
-    await event_bus.publish("task_updated", {
-        "id": task_id,
-        "status": status
-    })
-    
+    await event_bus.publish("task_updated", {"id": task_id, "status": status})
+
     return {"id": task_id, "status": status}
 
 
@@ -263,24 +264,24 @@ async def update_status(task_id: str, status: str):
 async def batch_update_status(task_ids: list[str], status: str):
     """
     批量更新任务状态
-    
+
     Args:
         task_ids: 任务ID列表
         status: 新状态 (inbox/todo/doing/done)
-    
+
     Returns:
         更新结果统计
     """
     from ai_as_me.kanban.database import Database
-    
+
     valid_statuses = ["inbox", "todo", "doing", "done"]
     if status not in valid_statuses:
         raise HTTPException(status_code=400, detail="Invalid status")
-    
+
     db = Database(DB_PATH)
     success_count = 0
     failed = []
-    
+
     for task_id in task_ids:
         try:
             db.update_task_status(task_id, status)
@@ -288,31 +289,27 @@ async def batch_update_status(task_ids: list[str], status: str):
             await event_bus.publish("task_updated", {"id": task_id, "status": status})
         except Exception as e:
             failed.append({"id": task_id, "error": str(e)})
-    
-    return {
-        "total": len(task_ids),
-        "success": success_count,
-        "failed": failed
-    }
+
+    return {"total": len(task_ids), "success": success_count, "failed": failed}
 
 
 @app.delete("/api/tasks/batch", tags=["Tasks"], summary="批量删除任务")
 async def batch_delete_tasks(task_ids: list[str]):
     """
     批量删除任务
-    
+
     Args:
         task_ids: 任务ID列表
-    
+
     Returns:
         删除结果统计
     """
     from ai_as_me.kanban.database import Database
-    
+
     db = Database(DB_PATH)
     success_count = 0
     failed = []
-    
+
     for task_id in task_ids:
         try:
             with db._pool.get_connection() as conn:
@@ -322,12 +319,8 @@ async def batch_delete_tasks(task_ids: list[str]):
             await event_bus.publish("task_deleted", {"id": task_id})
         except Exception as e:
             failed.append({"id": task_id, "error": str(e)})
-    
-    return {
-        "total": len(task_ids),
-        "success": success_count,
-        "failed": failed
-    }
+
+    return {"total": len(task_ids), "success": success_count, "failed": failed}
 
 
 # Story 6.5: 系统状态 (Story 13.3: 健康检查增强)
@@ -335,36 +328,38 @@ async def batch_delete_tasks(task_ids: list[str]):
 async def system_health():
     """
     系统健康检查（详细版）
-    
+
     检查所有组件状态：
     - database: 数据库连接
     - rag: RAG服务
     - tools: 工具可用性
-    
+
     Returns:
         详细的组件健康状态
     """
     from ai_as_me.orchestrator.skill_matcher import ToolRegistry
-    from ai_as_me.kanban.database import Database
-    
+
     components = {}
-    
+
     # 检查数据库
     try:
-        db = Database(DB_PATH)
+        from .postgres_db import get_database
+
+        db = get_database()
         db.get_all_tasks()
         components["database"] = {"status": "healthy", "path": DB_PATH}
     except Exception as e:
         components["database"] = {"status": "unhealthy", "error": str(e)}
-    
+
     # 检查RAG服务
     try:
         from ai_as_me.rag.retriever import VectorStore
-        store = VectorStore()
+
+        VectorStore()
         components["rag"] = {"status": "healthy", "model": "all-MiniLM-L6-v2"}
     except Exception as e:
         components["rag"] = {"status": "unhealthy", "error": str(e)}
-    
+
     # 检查工具
     try:
         registry = ToolRegistry(CONFIG_PATH)
@@ -372,20 +367,22 @@ async def system_health():
         components["tools"] = {
             "status": "healthy",
             "available": tools,
-            "count": len(tools)
+            "count": len(tools),
         }
     except Exception as e:
         components["tools"] = {"status": "unhealthy", "error": str(e)}
-    
+
     # 整体状态
-    overall_status = "healthy" if all(
-        c.get("status") == "healthy" for c in components.values()
-    ) else "degraded"
-    
+    overall_status = (
+        "healthy"
+        if all(c.get("status") == "healthy" for c in components.values())
+        else "degraded"
+    )
+
     return {
         "status": overall_status,
         "components": components,
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.now().isoformat(),
     }
 
 
@@ -394,7 +391,7 @@ class EventBus:
     def __init__(self, max_subscribers: int = 100):
         self.subscribers: list[asyncio.Queue] = []
         self.max_subscribers = max_subscribers
-    
+
     async def publish(self, event: str, data: dict):
         """发布事件到所有订阅者"""
         dead = []
@@ -405,7 +402,7 @@ class EventBus:
                 dead.append(queue)
         for q in dead:
             self.subscribers.remove(q)
-    
+
     async def subscribe(self) -> asyncio.Queue:
         """订阅事件"""
         # 清理满队列
@@ -415,7 +412,7 @@ class EventBus:
         queue = asyncio.Queue(maxsize=50)
         self.subscribers.append(queue)
         return queue
-    
+
     def unsubscribe(self, queue: asyncio.Queue):
         """取消订阅"""
         if queue in self.subscribers:
@@ -428,6 +425,7 @@ event_bus = EventBus()
 @app.get("/api/events")
 async def event_stream():
     """SSE 事件流"""
+
     async def generate():
         queue = await event_bus.subscribe()
         try:
@@ -440,14 +438,14 @@ async def event_stream():
             pass
         finally:
             event_bus.unsubscribe(queue)
-    
+
     return StreamingResponse(
         generate(),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
-        }
+        },
     )
 
 

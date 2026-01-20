@@ -76,10 +76,18 @@ function kanbanApp() {
                             const newStatus = evt.to.dataset.status;
                             const oldStatus = evt.from.dataset.status;
                             
+                            console.log('🔥 [onEnd] Drag completed:', {
+                                taskId,
+                                from: oldStatus,
+                                to: newStatus,
+                                timestamp: new Date().toISOString()
+                            });
+                            
                             if (taskId && newStatus) {
                                 try {
                                     await this.moveTask(taskId, newStatus);
                                 } catch (error) {
+                                    console.error('🔥 [onEnd] Move failed:', error);
                                     // 回滚: 移回原位置
                                     this.error = `移动失败: ${error.message}`;
                                     // 重新加载看板恢复状态
@@ -122,32 +130,41 @@ function kanbanApp() {
         async refreshDoingTasks() {
             // 仅在有doing任务时刷新
             if ((this.board.doing || []).length > 0) {
+                console.log('🔍 [refreshDoingTasks] START, current doing:', this.board.doing.length);
                 try {
                     const res = await fetch('/api/kanban/board');
                     if (res.ok) {
                         const data = await res.json();
                         const newDoing = data.doing || [];
+                        console.log('🔍 [refreshDoingTasks] API returned doing:', newDoing.length);
                         
                         // 🔧 FIX: 保留正在执行的任务至少3秒，避免闪现
                         const now = Date.now();
+                        const beforeFilter = this.board.doing.length;
                         this.board.doing = this.board.doing.filter(task => {
                             // 跳过乐观更新的任务
                             if (this._optimisticUpdates.has(task.id)) {
+                                console.log('🔍 [refreshDoingTasks] Skipping optimistic:', task.id);
                                 return true;
                             }
                             const taskAge = now - new Date(task.updated_at).getTime();
-                            return taskAge < 3000 || newDoing.some(t => t.id === task.id);
+                            const keep = taskAge < 3000 || newDoing.some(t => t.id === task.id);
+                            console.log('🔍 [refreshDoingTasks] Task', task.id, 'age:', taskAge, 'keep:', keep);
+                            return keep;
                         });
+                        console.log('🔍 [refreshDoingTasks] After filter:', beforeFilter, '->', this.board.doing.length);
                         
                         // 合并新任务
                         newDoing.forEach(newTask => {
                             if (!this.board.doing.some(t => t.id === newTask.id)) {
+                                console.log('🔍 [refreshDoingTasks] Adding new task:', newTask.id);
                                 this.board.doing.push(newTask);
                             }
                         });
+                        console.log('🔍 [refreshDoingTasks] Final doing count:', this.board.doing.length);
                     }
                 } catch (e) {
-                    console.error('Failed to refresh doing tasks:', e);
+                    console.error('🔍 [refreshDoingTasks] ERROR:', e);
                 }
             }
         },
@@ -315,11 +332,13 @@ function kanbanApp() {
         },
 
         async moveTask(taskId, toStatus) {
+            console.log('🔍 [moveTask] START:', taskId, toStatus, new Date().toISOString());
             this.loading = true;
             this.error = '';
             
             // 🔧 FIX: 标记为乐观更新，防止刷新覆盖
             this._optimisticUpdates.set(taskId, { status: toStatus, timestamp: Date.now() });
+            console.log('🔍 [moveTask] Optimistic update set:', this._optimisticUpdates.size);
             
             try {
                 const res = await fetch(`/api/kanban/tasks/${taskId}/move`, {
@@ -328,10 +347,15 @@ function kanbanApp() {
                     body: JSON.stringify({ to_status: toStatus })
                 });
                 
+                console.log('🔍 [moveTask] API response:', res.status);
+                
                 if (!res.ok) {
                     const data = await res.json();
                     throw new Error(data.detail || '移动任务失败');
                 }
+                
+                const responseData = await res.json();
+                console.log('🔍 [moveTask] Response data:', responseData);
                 
                 // 如果移动到done，显示庆祝动画
                 if (toStatus === 'done') {
@@ -340,18 +364,22 @@ function kanbanApp() {
                 
                 // 立即更新本地状态，避免重新加载整个看板
                 this.updateLocalTaskStatus(taskId, toStatus);
+                console.log('🔍 [moveTask] Local status updated, doing count:', this.board.doing.length);
                 
                 // 🔧 FIX: 3秒后移除乐观更新标记
                 setTimeout(() => {
+                    console.log('🔍 [moveTask] Removing optimistic update for:', taskId);
                     this._optimisticUpdates.delete(taskId);
                 }, 3000);
             } catch (e) {
+                console.error('🔍 [moveTask] ERROR:', e);
                 this.error = e.message;
                 // 失败时立即移除标记并重新加载
                 this._optimisticUpdates.delete(taskId);
                 await this.loadBoard();
             } finally {
                 this.loading = false;
+                console.log('🔍 [moveTask] END');
             }
         },
 

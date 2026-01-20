@@ -1,4 +1,5 @@
 """Kanban Task Models - Vibe-Kanban."""
+
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime
@@ -10,7 +11,12 @@ PLACEHOLDER_PENDING = "[待澄清]"
 PLACEHOLDER_TOOL = "[待配置]"
 PLACEHOLDER_TIME = "[待评估]"
 PLACEHOLDER_NONE = "[无]"
-PLACEHOLDERS = {PLACEHOLDER_PENDING, PLACEHOLDER_TOOL, PLACEHOLDER_TIME, PLACEHOLDER_NONE}
+PLACEHOLDERS = {
+    PLACEHOLDER_PENDING,
+    PLACEHOLDER_TOOL,
+    PLACEHOLDER_TIME,
+    PLACEHOLDER_NONE,
+}
 
 
 class TaskStatus(str, Enum):
@@ -33,6 +39,7 @@ class TaskClarification(BaseModel):
     time_estimate: Optional[str] = None
     context: Optional[str] = None
 
+
 class Task(BaseModel):
     id: str
     title: str
@@ -46,14 +53,19 @@ class Task(BaseModel):
     execution_status: Optional[str] = None  # pending, running, completed, failed
     has_result: bool = False
     # 执行监控扩展字段
-    current_phase: Optional[str] = None  # PREPARING, ANALYZING, EXECUTING, VALIDATING, COMPLETED, FAILED
+    current_phase: Optional[str] = (
+        None  # PREPARING, ANALYZING, EXECUTING, VALIDATING, COMPLETED, FAILED
+    )
     progress: int = 0  # 0-100
     steps: List[str] = Field(default_factory=list)  # 执行步骤列表
     logs: List[str] = Field(default_factory=list)  # 实时日志
-    
+
     def to_markdown(self) -> str:
-        criteria = "\n".join(f"- [ ] {c}" for c in self.clarification.acceptance_criteria) or "- [ ] 待定义"
-        
+        criteria = (
+            "\n".join(f"- [ ] {c}" for c in self.clarification.acceptance_criteria)
+            or "- [ ] 待定义"
+        )
+
         return f"""---
 id: {self.id}
 created: {self.created_at.isoformat()}
@@ -86,27 +98,29 @@ clarified: {str(self.clarified).lower()}
 
     @classmethod
     def from_markdown(cls, content: str) -> "Task":
-        fm_match = re.match(r'^---\n(.*?)\n---\n', content, re.DOTALL)
+        fm_match = re.match(r"^---\n(.*?)\n---\n", content, re.DOTALL)
         if not fm_match:
             raise ValueError("Invalid task format")
-        
+
         fm_text = fm_match.group(1)
-        body = content[fm_match.end():]
-        
+        body = content[fm_match.end() :]
+
         def get_fm(key: str, default: str = "") -> str:
-            m = re.search(rf'^{key}:\s*(.+)$', fm_text, re.MULTILINE)
+            m = re.search(rf"^{key}:\s*(.+)$", fm_text, re.MULTILINE)
             return m.group(1).strip() if m else default
-        
+
         def get_section(name: str) -> str:
-            pattern = rf'## [^\n]*{name}[^\n]*\n(.*?)(?=\n## |\Z)'
+            pattern = rf"## [^\n]*{name}[^\n]*\n(.*?)(?=\n## |\Z)"
             m = re.search(pattern, body, re.DOTALL)
             text = m.group(1).strip() if m else ""
             return "" if text in PLACEHOLDERS else text
-        
-        title_match = re.search(r'^#\s+(.+)$', body, re.MULTILINE)
+
+        title_match = re.search(r"^#\s+(.+)$", body, re.MULTILINE)
         criteria_text = get_section("验收标准")
-        criteria = [c for c in re.findall(r'- \[[ x]\] (.+)', criteria_text) if c != "待定义"]
-        
+        criteria = [
+            c for c in re.findall(r"- \[[ x]\] (.+)", criteria_text) if c != "待定义"
+        ]
+
         return cls(
             id=get_fm("id"),
             title=title_match.group(1) if title_match else "Untitled",
@@ -119,10 +133,18 @@ clarified: {str(self.clarified).lower()}
                 acceptance_criteria=criteria,
                 tool=get_section("工具") or None,
                 time_estimate=get_section("时间") or None,
-                context=get_section("上下文") or None
+                context=get_section("上下文") or None,
             ),
-            created_at=datetime.fromisoformat(get_fm("created")) if get_fm("created") else datetime.now(),
-            updated_at=datetime.fromisoformat(get_fm("updated")) if get_fm("updated") else datetime.now()
+            created_at=(
+                datetime.fromisoformat(get_fm("created"))
+                if get_fm("created")
+                else datetime.now()
+            ),
+            updated_at=(
+                datetime.fromisoformat(get_fm("updated"))
+                if get_fm("updated")
+                else datetime.now()
+            ),
         )
 
 

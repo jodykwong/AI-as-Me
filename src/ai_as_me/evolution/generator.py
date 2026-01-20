@@ -1,4 +1,5 @@
 """Rule Generator - Story 1.3"""
+
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -12,7 +13,7 @@ class GeneratedRule:
     confidence: float
     created_at: datetime
     metadata: dict
-    
+
     def to_markdown(self) -> str:
         return f"""---
 source: {self.source_pattern}
@@ -41,25 +42,30 @@ applied_count: 0
 class RuleGenerator:
     def __init__(self, llm_client):
         self.llm = llm_client
-    
+
     def generate(self, pattern) -> GeneratedRule | None:
         """从模式生成规则"""
         if pattern.confidence < 0.6:
             return None
-        
+
         prompt = self._build_prompt(pattern)
-        
+
         try:
-            response = self.llm.chat([
-                {"role": "system", "content": "你是规则生成专家，将模式转化为可执行的决策规则。"},
-                {"role": "user", "content": prompt}
-            ])
-            
+            response = self.llm.chat(
+                [
+                    {
+                        "role": "system",
+                        "content": "你是规则生成专家，将模式转化为可执行的决策规则。",
+                    },
+                    {"role": "user", "content": prompt},
+                ]
+            )
+
             return self._parse_rule(response, pattern)
         except Exception as e:
             print(f"Rule generation failed: {e}")
             return None
-    
+
     def _build_prompt(self, pattern) -> str:
         return f"""基于以下模式生成一条决策规则：
 
@@ -74,10 +80,10 @@ class RuleGenerator:
 
 格式：
 当 [触发条件] 时，[行动建议]。"""
-    
+
     def _parse_rule(self, response: str, pattern) -> GeneratedRule:
         rule_id = f"rule-{datetime.now().strftime('%Y%m%d%H%M%S')}"
-        
+
         return GeneratedRule(
             rule_id=rule_id,
             category=pattern.category,
@@ -87,6 +93,6 @@ class RuleGenerator:
             created_at=datetime.now(),
             metadata={
                 "source_tasks": pattern.source_tasks,
-                "frequency": pattern.frequency
-            }
+                "frequency": pattern.frequency,
+            },
         )

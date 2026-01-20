@@ -1,4 +1,5 @@
 """规则管理 API."""
+
 from fastapi import APIRouter, HTTPException
 from pathlib import Path
 from typing import List, Dict
@@ -12,6 +13,7 @@ router = APIRouter()
 
 class RuleVersion(BaseModel):
     """规则版本模型."""
+
     version: str
     timestamp: str
     checksum: str
@@ -20,6 +22,7 @@ class RuleVersion(BaseModel):
 
 class RuleInfo(BaseModel):
     """规则信息模型."""
+
     name: str
     current_version: str
     version_count: int
@@ -27,6 +30,7 @@ class RuleInfo(BaseModel):
 
 class RulesResponse(BaseModel):
     """规则列表响应模型."""
+
     core: List[Dict]
     learned: List[Dict]
 
@@ -36,10 +40,7 @@ def _get_cached_rules() -> RulesResponse:
     """缓存规则列表（1分钟）."""
     loader = SoulLoader(Path("soul"))
     rules = loader.list_rules()
-    return RulesResponse(
-        core=rules.get("core", []),
-        learned=rules.get("learned", [])
-    )
+    return RulesResponse(core=rules.get("core", []), learned=rules.get("learned", []))
 
 
 @router.get("/rules", response_model=RulesResponse)
@@ -56,13 +57,13 @@ async def get_rule_history(rule_name: str):
     """获取规则版本历史."""
     manager = RuleVersionManager(Path("soul/rules"))
     history = manager.get_history(rule_name)
-    
+
     return [
         RuleVersion(
             version=v.version,
             timestamp=v.timestamp.isoformat(),
             checksum=v.checksum,
-            message=v.message
+            message=v.message,
         )
         for v in history
     ]
@@ -72,7 +73,7 @@ async def get_rule_history(rule_name: str):
 async def rollback_rule(rule_name: str, version: str):
     """回滚规则到指定版本."""
     manager = RuleVersionManager(Path("soul/rules"))
-    
+
     try:
         manager.rollback(rule_name, version)
         return {"success": True, "message": f"Rolled back to {version}"}
