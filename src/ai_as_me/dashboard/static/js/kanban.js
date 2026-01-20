@@ -32,17 +32,26 @@ function kanbanApp() {
             tool: '',
             time_estimate: ''
         },
+        
+        // 执行监控相关
+        selectedTaskId: '',
+        executionLogs: [],
+        autoScroll: true,
+        lastLogTimestamp: null,
 
         async init() {
             console.log('kanbanApp initialized');
             // 先设置默认值，避免渲染错误
             this.board = { inbox: [], todo: [], doing: [], done: [] };
+            this._optimisticUpdates = new Map(); // 🔧 FIX: 跟踪乐观更新
             await this.loadBoard();
             await this.loadAgentStatus();
             // 定期刷新Agent状态（不刷新看板，避免干扰用户操作）
             setInterval(() => this.loadAgentStatus(), CONFIG.AGENT_STATUS_REFRESH_INTERVAL);
             // 仅刷新doing任务状态（轻量级）
             setInterval(() => this.refreshDoingTasks(), CONFIG.DOING_TASKS_REFRESH_INTERVAL);
+            // 执行日志监控
+            setInterval(() => this.fetchExecutionLogs(), 2000);
             // 初始化拖拽功能
             this.$nextTick(() => this.initDragDrop());
         },
@@ -117,8 +126,25 @@ function kanbanApp() {
                     const res = await fetch('/api/kanban/board');
                     if (res.ok) {
                         const data = await res.json();
-                        // 只更新doing列表，不影响其他列
-                        this.board.doing = data.doing || [];
+                        const newDoing = data.doing || [];
+                        
+                        // 🔧 FIX: 保留正在执行的任务至少3秒，避免闪现
+                        const now = Date.now();
+                        this.board.doing = this.board.doing.filter(task => {
+                            // 跳过乐观更新的任务
+                            if (this._optimisticUpdates.has(task.id)) {
+                                return true;
+                            }
+                            const taskAge = now - new Date(task.updated_at).getTime();
+                            return taskAge < 3000 || newDoing.some(t => t.id === task.id);
+                        });
+                        
+                        // 合并新任务
+                        newDoing.forEach(newTask => {
+                            if (!this.board.doing.some(t => t.id === newTask.id)) {
+                                this.board.doing.push(newTask);
+                            }
+                        });
                     }
                 } catch (e) {
                     console.error('Failed to refresh doing tasks:', e);
@@ -291,6 +317,10 @@ function kanbanApp() {
         async moveTask(taskId, toStatus) {
             this.loading = true;
             this.error = '';
+            
+            // 🔧 FIX: 标记为乐观更新，防止刷新覆盖
+            this._optimisticUpdates.set(taskId, { status: toStatus, timestamp: Date.now() });
+            
             try {
                 const res = await fetch(`/api/kanban/tasks/${taskId}/move`, {
                     method: 'PUT',
@@ -310,9 +340,15 @@ function kanbanApp() {
                 
                 // 立即更新本地状态，避免重新加载整个看板
                 this.updateLocalTaskStatus(taskId, toStatus);
+                
+                // 🔧 FIX: 3秒后移除乐观更新标记
+                setTimeout(() => {
+                    this._optimisticUpdates.delete(taskId);
+                }, 3000);
             } catch (e) {
                 this.error = e.message;
-                // 只在出错时重新加载
+                // 失败时立即移除标记并重新加载
+                this._optimisticUpdates.delete(taskId);
                 await this.loadBoard();
             } finally {
                 this.loading = false;
@@ -464,6 +500,91 @@ function kanbanApp() {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        },
+        
+        // 执行监控相关函数
+        getCurrentTask() {
+            return (this.board.doing || [])[0] || null;
+        },
+        
+        async fetchExecutionLogs() {
+            const currentTask = this.getCurrentTask();
+            if (!currentTask) {
+                // 🔧 FIX: 延迟5秒清空日志，避免任务完成时日志闪现消失
+                if (!this._logClearTimer) {
+                    this._logClearTimer = setTimeout(() => {
+                        this.executionLogs = [];
+                        this.selectedTaskId = '';
+                        this._logClearTimer = null;
+                    }, 5000);
+                }
+                return;
+            }
+            
+            // 有任务时取消清空定时器
+            if (this._logClearTimer) {
+                clearTimeout(this._logClearTimer);
+                this._logClearTimer = null;
+            }
+            
+            // 如果切换了任务，清空日志
+            if (this.selectedTaskId !== currentTask.id) {
+                this.selectedTaskId = currentTask.id;
+                this.executionLogs = [];
+                this.lastLogTimestamp = null;
+            }
+            
+            try {
+                const url = `/api/tasks/${currentTask.id}/execution-log` + 
+                           (this.lastLogTimestamp ? `?since_timestamp=${this.lastLogTimestamp}` : '');
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                if (data.logs && data.logs.length > 0) {
+                    this.executionLogs.push(...data.logs);
+                    this.lastLogTimestamp = data.logs[data.logs.length - 1].timestamp;
+                    
+                    // 限制日志条数
+                    if (this.executionLogs.length > 100) {
+                        this.executionLogs = this.executionLogs.slice(-100);
+                    }
+                    
+                    // 自动滚动
+                    if (this.autoScroll) {
+                        this.$nextTick(() => {
+                            const container = document.getElementById('logContainer');
+                            if (container) {
+                                container.scrollTop = container.scrollHeight;
+                            }
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('获取执行日志失败:', error);
+            }
+        },
+        
+        toggleAutoScroll() {
+            this.autoScroll = !this.autoScroll;
+        },
+        
+        clearLogs() {
+            this.executionLogs = [];
+            this.lastLogTimestamp = null;
+        },
+        
+        formatLogTime(timestamp) {
+            return new Date(timestamp).toLocaleTimeString();
+        },
+        
+        getLogTypeClass(type) {
+            const classes = {
+                'step': 'text-cyan-400',
+                'command': 'text-yellow-400', 
+                'output': 'text-green-400',
+                'error': 'text-red-400'
+            };
+            return classes[type] || 'text-gray-400';
         }
     };
     console.log('kanbanApp returning object');

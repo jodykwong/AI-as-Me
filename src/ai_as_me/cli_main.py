@@ -1,4 +1,5 @@
 """AI-as-Me CLI入口点"""
+
 import click
 import sys
 import subprocess
@@ -6,6 +7,7 @@ import asyncio
 import time
 from pathlib import Path
 import os
+from datetime import datetime
 from ai_as_me import __version__
 
 
@@ -23,20 +25,20 @@ def demo():
     pass
 
 
-@demo.command('first-evolution')
+@demo.command("first-evolution")
 def first_evolution():
     """首次进化体验 Demo（约 5-8 分钟）
-    
+
     这个 Demo 会：
     • 执行一个示例任务
     • 让你看到 AI 如何学习
     • 生成第一条规则
     """
     from ai_as_me.demo import FirstEvolutionDemo
-    
+
     demo_instance = FirstEvolutionDemo()
     result = asyncio.run(demo_instance.run())
-    
+
     if not result.get("success"):
         sys.exit(1)
 
@@ -55,84 +57,91 @@ def inspiration():
     pass
 
 
-@inspiration.command('add')
-@click.argument('content')
-@click.option('--tags', default='', help='标签，逗号分隔')
-@click.option('--priority', default='medium', type=click.Choice(['low', 'medium', 'high']))
+@inspiration.command("add")
+@click.argument("content")
+@click.option("--tags", default="", help="标签，逗号分隔")
+@click.option(
+    "--priority", default="medium", type=click.Choice(["low", "medium", "high"])
+)
 def inspiration_add(content: str, tags: str, priority: str):
     """添加灵感"""
     from ai_as_me.inspiration import InspirationPool, Inspiration
-    
+
     pool = InspirationPool()
     insp = Inspiration(
         content=content,
         source="manual",
-        tags=[t.strip() for t in tags.split(',') if t.strip()],
-        priority=priority
+        tags=[t.strip() for t in tags.split(",") if t.strip()],
+        priority=priority,
     )
     insp_id = pool.add(insp)
     click.echo(f"✅ 灵感已添加: {insp_id}")
 
 
-@inspiration.command('list')
-@click.option('--status', default=None, help='按状态筛选')
-@click.option('--limit', default=20, help='显示数量')
+@inspiration.command("list")
+@click.option("--status", default=None, help="按状态筛选")
+@click.option("--limit", default=20, help="显示数量")
 def inspiration_list(status: str, limit: int):
     """列出灵感"""
     from ai_as_me.inspiration import InspirationPool
-    
+
     pool = InspirationPool()
     inspirations = pool.list(status=status, limit=limit)
-    
+
     if not inspirations:
         click.echo("💭 灵感池为空")
         return
-    
+
     click.echo(f"\n💡 灵感列表 ({len(inspirations)} 条):\n")
     for insp in inspirations:
-        status_icon = {"incubating": "🥚", "mature": "🐣", "converted": "✅", "archived": "📦"}.get(insp.status, "❓")
+        status_icon = {
+            "incubating": "🥚",
+            "mature": "🐣",
+            "converted": "✅",
+            "archived": "📦",
+        }.get(insp.status, "❓")
         click.echo(f"{status_icon} [{insp.id}] {insp.content[:50]}...")
         click.echo(f"   成熟度: {insp.maturity:.0%} | 优先级: {insp.priority}\n")
 
 
-@inspiration.command('mature')
+@inspiration.command("mature")
 def inspiration_mature():
     """列出成熟的灵感"""
     from ai_as_me.inspiration import InspirationPool, InspirationIncubator
-    
+
     pool = InspirationPool()
     incubator = InspirationIncubator(pool)
-    
+
     # 先孵化更新成熟度
     incubator.incubate_all()
     mature_list = incubator.get_mature()
-    
+
     if not mature_list:
         click.echo("🥚 暂无成熟的灵感")
         return
-    
+
     click.echo(f"\n🐣 成熟灵感 ({len(mature_list)} 条):\n")
     for insp in mature_list:
         click.echo(f"[{insp.id}] {insp.content}")
         click.echo(f"   成熟度: {insp.maturity:.0%} | 可转化为规则\n")
 
 
-@inspiration.command('convert')
-@click.argument('id')
-@click.option('--to', 'target', default='rule', type=click.Choice(['rule', 'task']))
+@inspiration.command("convert")
+@click.argument("id")
+@click.option("--to", "target", default="rule", type=click.Choice(["rule", "task"]))
 def inspiration_convert(id: str, target: str):
     """转化灵感为规则或任务"""
     from ai_as_me.inspiration import InspirationPool, InspirationConverter
-    
+
     pool = InspirationPool()
     converter = InspirationConverter(pool)
-    
+
     insp = pool.get(id)
     if not insp:
         click.echo(f"❌ 未找到灵感: {id}")
         return
-    
-    if target == 'rule':
+
+    if target == "rule":
         path = converter.to_rule(insp)
         click.echo(f"✅ 已转化为规则: {path}")
     else:
@@ -140,21 +149,21 @@ def inspiration_convert(id: str, target: str):
         click.echo(f"✅ 已转化为任务: {desc}")
 
 
-@inspiration.command('stats')
+@inspiration.command("stats")
 def inspiration_stats():
     """显示灵感池统计"""
     from ai_as_me.inspiration import InspirationPool
-    
+
     pool = InspirationPool()
     stats = pool.get_stats()
-    
+
     click.echo("\n📊 灵感池统计:\n")
     click.echo(f"总数: {stats.get('total', 0)}")
-    click.echo(f"\n按状态:")
-    for status, count in stats.get('by_status', {}).items():
+    click.echo("\n按状态:")
+    for status, count in stats.get("by_status", {}).items():
         click.echo(f"  {status}: {count}")
-    click.echo(f"\n按来源:")
-    for source, count in stats.get('by_source', {}).items():
+    click.echo("\n按来源:")
+    for source, count in stats.get("by_source", {}).items():
         click.echo(f"  {source}: {count}")
 
 
@@ -165,34 +174,34 @@ def rule():
     pass
 
 
-@rule.command('history')
-@click.argument('rule_path')
+@rule.command("history")
+@click.argument("rule_path")
 def rule_history(rule_path: str):
     """查看规则版本历史"""
     from ai_as_me.soul.versioning import RuleVersionManager
-    
+
     vm = RuleVersionManager()
     rule_name = Path(rule_path).stem
     history = vm.get_history(rule_name)
-    
+
     if not history:
         click.echo(f"📭 {rule_name} 暂无版本历史")
         return
-    
+
     click.echo(f"\n📜 {rule_name} 版本历史:\n")
     for v in history:
         click.echo(f"  v{v.version} | {v.timestamp[:16]} | {v.reason}")
 
 
-@rule.command('show')
-@click.argument('rule_path')
-@click.option('--version', '-v', default=None, type=int, help='版本号')
+@rule.command("show")
+@click.argument("rule_path")
+@click.option("--version", "-v", default=None, type=int, help="版本号")
 def rule_show(rule_path: str, version: int):
     """查看规则内容"""
     from ai_as_me.soul.versioning import RuleVersionManager
-    
+
     path = Path(rule_path)
-    
+
     if version:
         vm = RuleVersionManager()
         content = vm.get_version(path.stem, version)
@@ -209,98 +218,100 @@ def rule_show(rule_path: str, version: int):
             click.echo(f"❌ 规则文件不存在: {rule_path}")
 
 
-@rule.command('diff')
-@click.argument('rule_path')
-@click.option('--v1', required=True, type=int, help='版本1')
-@click.option('--v2', required=True, type=int, help='版本2')
+@rule.command("diff")
+@click.argument("rule_path")
+@click.option("--v1", required=True, type=int, help="版本1")
+@click.option("--v2", required=True, type=int, help="版本2")
 def rule_diff(rule_path: str, v1: int, v2: int):
     """对比两个版本"""
     from ai_as_me.soul.versioning import RuleVersionManager
-    
+
     vm = RuleVersionManager()
     diff = vm.diff(Path(rule_path).stem, v1, v2)
-    
+
     click.echo(f"\n🔍 v{v1} vs v{v2}:\n")
-    if diff['removed']:
+    if diff["removed"]:
         click.echo("删除:")
-        for line in diff['removed'][:10]:
+        for line in diff["removed"][:10]:
             click.echo(f"  - {line}")
-    if diff['added']:
+    if diff["added"]:
         click.echo("新增:")
-        for line in diff['added'][:10]:
+        for line in diff["added"][:10]:
             click.echo(f"  + {line}")
-    if not diff['removed'] and not diff['added']:
+    if not diff["removed"] and not diff["added"]:
         click.echo("无差异")
 
 
-@rule.command('rollback')
-@click.argument('rule_path')
-@click.option('--to', 'to_version', required=True, type=int, help='目标版本')
+@rule.command("rollback")
+@click.argument("rule_path")
+@click.option("--to", "to_version", required=True, type=int, help="目标版本")
 def rule_rollback(rule_path: str, to_version: int):
     """回滚到指定版本"""
     from ai_as_me.soul.versioning import RuleVersionManager
-    
+
     vm = RuleVersionManager()
     path = Path(rule_path)
-    
+
     if vm.rollback(path, to_version):
         click.echo(f"✅ 已回滚到 v{to_version}")
     else:
         click.echo(f"❌ 回滚失败，版本 v{to_version} 不存在")
 
 
-@soul.command('check-conflicts')
-@click.option('--auto-resolve', is_flag=True, help='自动处理冲突')
+@soul.command("check-conflicts")
+@click.option("--auto-resolve", is_flag=True, help="自动处理冲突")
 def check_conflicts(auto_resolve: bool):
     """检查规则冲突
-    
+
     扫描 soul/rules/core/ 和 soul/rules/learned/，
     检测可能的规则冲突。
     """
     from ai_as_me.soul.conflict_detector import ConflictDetector
     from ai_as_me.soul.conflict_resolver import ConflictResolver
-    
+
     async def run_check():
         detector = ConflictDetector()
         conflicts = await detector.scan()
-        
+
         if not conflicts:
             click.echo("✅ 太棒了！没有发现规则冲突")
             click.echo(f"\nCore Rules: {len(list(detector.core_dir.rglob('*.md')))} 条")
-            click.echo(f"Learned Rules: {len(list(detector.learned_dir.rglob('*.md')))} 条")
+            click.echo(
+                f"Learned Rules: {len(list(detector.learned_dir.rglob('*.md')))} 条"
+            )
             return
-        
+
         click.echo(f"⚠️  发现 {len(conflicts)} 个冲突：\n")
-        
+
         resolver = ConflictResolver()
         for i, conflict in enumerate(conflicts, 1):
             click.echo(f"冲突 #{i}: {conflict.type}")
             click.echo(f"  Core Rule: {conflict.core_rule}")
             click.echo(f"  Learned Rule: {conflict.learned_rule}")
             click.echo(f"  原因: {conflict.reason}")
-            
+
             if auto_resolve:
                 resolution = await resolver.auto_resolve(conflict)
                 click.echo(f"  ✓ 已自动处理: {resolution['action']}")
-            
+
             click.echo()
-    
+
     asyncio.run(run_check())
 
 
-@soul.command('status')
+@soul.command("status")
 def soul_status():
     """显示 Soul 状态"""
     from pathlib import Path
-    
+
     soul_dir = Path("soul/rules")
     core_dir = soul_dir / "core"
     learned_dir = soul_dir / "learned"
-    
+
     click.echo("📊 Soul 状态：\n")
     click.echo(f"Core Rules: {len(list(core_dir.rglob('*.md')))} 条")
     click.echo(f"Learned Rules: {len(list(learned_dir.rglob('*.md')))} 条")
-    
+
     # 检查冲突日志
     log_file = Path("logs/rule-conflicts.jsonl")
     if log_file.exists():
@@ -308,48 +319,42 @@ def soul_status():
         click.echo(f"历史冲突: {conflict_count} 次")
 
 
-@soul.command('stats')
-@click.option('--days', default=7, help='统计天数')
+@soul.command("stats")
+@click.option("--days", default=7, help="统计天数")
 def soul_stats(days: int):
     """显示进化统计"""
-    from pathlib import Path
     from ai_as_me.stats import StatsCalculator, StatsVisualizer
-    
+
     calc = StatsCalculator()
     viz = StatsVisualizer()
     stats = calc.get_detailed_stats(days)
-    
+
     click.echo(f"\n📊 进化统计（最近 {days} 天）\n")
-    
+
     click.echo("🔥 规则应用频率（次/天）：")
-    click.echo(viz.render_ascii_bar(stats['application_frequency']))
-    
+    click.echo(viz.render_ascii_bar(stats["application_frequency"]))
+
     click.echo("\n⭐ 规则有效性评分：")
-    click.echo(viz.render_ascii_trend(stats['effectiveness_scores']))
-    
+    click.echo(viz.render_ascii_trend(stats["effectiveness_scores"]))
+
     click.echo(f"\n🎯 模式识别准确率: {stats['pattern_accuracy']:.2%}\n")
 
 
 # Story 6.1: Web 服务启动命令
 @cli.command()
-@click.option('--port', default=8080, help='Web 服务端口')
-@click.option('--host', default='127.0.0.1', help='绑定地址')
+@click.option("--port", default=8080, help="Web 服务端口")
+@click.option("--host", default="127.0.0.1", help="绑定地址")
 def serve(port: int, host: str):
     """启动 Web 仪表板"""
-    click.echo(f"🚀 启动 AI-as-Me Web 仪表板...")
+    click.echo("🚀 启动 AI-as-Me Web 仪表板...")
     click.echo(f"📍 访问地址: http://{host}:{port}")
-    click.echo(f"⏹️  按 Ctrl+C 停止服务\n")
-    
+    click.echo("⏹️  按 Ctrl+C 停止服务\n")
+
     try:
         import uvicorn
         from ai_as_me.dashboard.app import app
-        
-        uvicorn.run(
-            app,
-            host=host,
-            port=port,
-            log_level="info"
-        )
+
+        uvicorn.run(app, host=host, port=port, log_level="info")
     except KeyboardInterrupt:
         click.echo("\n✅ 服务已停止")
     except Exception as e:
@@ -373,20 +378,21 @@ def soul():
 def status():
     """检查 Soul 状态"""
     from ai_as_me.soul.loader import SoulLoader
+
     loader = SoulLoader(Path("soul"))
     status = loader.check_status()
-    
+
     click.echo("📊 Soul Status:")
     click.echo(f"  Profile: {'✓' if status['profile'] else '✗'}")
     click.echo(f"  Rules: {'✓' if status['rules'] else '✗'}")
     click.echo(f"  Mission: {'✓' if status['mission'] else '✗'}")
-    
+
     # v3.0: 检查规则目录
     rules_dir = Path("soul/rules")
     if rules_dir.exists():
         core_count = len(list((rules_dir / "core").glob("*.md")))
         learned_count = len(list((rules_dir / "learned").glob("*.md")))
-        click.echo(f"\n📚 Rules Structure (v3.0):")
+        click.echo("\n📚 Rules Structure (v3.0):")
         click.echo(f"  Core rules: {core_count}")
         click.echo(f"  Learned rules: {learned_count}")
 
@@ -395,6 +401,7 @@ def status():
 def migrate():
     """迁移 Soul 到 v3.0 结构"""
     from ai_as_me.soul.migrator import SoulMigrator
+
     migrator = SoulMigrator(Path("soul"))
     migrator.migrate()
     click.echo("✓ Migration complete")
@@ -404,28 +411,29 @@ def migrate():
 def check_env():
     """检查运行环境依赖"""
     click.echo("🔍 检查运行环境依赖...\n")
-    
+
     all_passed = True
-    
+
     # 检查Python版本
     py_version = sys.version_info
     if py_version >= (3, 9):
-        click.echo(f"✅ Python {py_version.major}.{py_version.minor}.{py_version.micro} (>= 3.9)")
+        click.echo(
+            f"✅ Python {py_version.major}.{py_version.minor}.{py_version.micro} (>= 3.9)"
+        )
     else:
-        click.echo(f"❌ Python {py_version.major}.{py_version.minor}.{py_version.micro} (需要 >= 3.9)")
+        click.echo(
+            f"❌ Python {py_version.major}.{py_version.minor}.{py_version.micro} (需要 >= 3.9)"
+        )
         all_passed = False
-    
+
     # 检查Node.js
     try:
         result = subprocess.run(
-            ["node", "--version"],
-            capture_output=True,
-            text=True,
-            timeout=5
+            ["node", "--version"], capture_output=True, text=True, timeout=5
         )
         if result.returncode == 0:
             node_version = result.stdout.strip()
-            version_num = int(node_version.lstrip('v').split('.')[0])
+            version_num = int(node_version.lstrip("v").split(".")[0])
             if version_num >= 16:
                 click.echo(f"✅ Node.js {node_version} (>= 16)")
             else:
@@ -438,14 +446,11 @@ def check_env():
         click.echo("❌ Node.js 未安装")
         click.echo("   安装指导: https://nodejs.org/")
         all_passed = False
-    
+
     # 检查npx
     try:
         result = subprocess.run(
-            ["npx", "--version"],
-            capture_output=True,
-            text=True,
-            timeout=5
+            ["npx", "--version"], capture_output=True, text=True, timeout=5
         )
         if result.returncode == 0:
             npx_version = result.stdout.strip()
@@ -456,7 +461,7 @@ def check_env():
     except (FileNotFoundError, subprocess.TimeoutExpired):
         click.echo("❌ npx 不可用 (通常随Node.js安装)")
         all_passed = False
-    
+
     click.echo()
     if all_passed:
         click.echo("✅ 所有依赖检查通过！")
@@ -466,18 +471,18 @@ def check_env():
 
 
 @cli.command()
-@click.option('--force', is_flag=True, help='强制重新初始化，覆盖已存在的目录')
+@click.option("--force", is_flag=True, help="强制重新初始化，覆盖已存在的目录")
 def init(force):
     """初始化AI-as-Me配置和目录结构"""
     click.echo("🚀 初始化 AI-as-Me 系统...\n")
-    
+
     # 定义目录结构
-    dirs = ['soul', 'kanban', 'logs']
+    dirs = ["soul", "kanban", "logs"]
     cwd = Path.cwd()
-    
+
     created = []
     skipped = []
-    
+
     # 创建目录
     for dir_name in dirs:
         dir_path = cwd / dir_name
@@ -488,12 +493,12 @@ def init(force):
             dir_path.mkdir(mode=0o700, exist_ok=True)
             click.echo(f"✅ 创建 {dir_name}/ (权限: 700)")
             created.append(dir_name)
-    
+
     # 创建.env模板
-    env_file = cwd / '.env'
+    env_file = cwd / ".env"
     if env_file.exists() and not force:
-        click.echo(f"⏭️  .env 已存在，跳过")
-        skipped.append('.env')
+        click.echo("⏭️  .env 已存在，跳过")
+        skipped.append(".env")
     else:
         env_template = """# AI-as-Me 环境配置
 # 生成时间: 自动生成
@@ -511,15 +516,15 @@ LOG_LEVEL=INFO
 """
         env_file.write_text(env_template)
         os.chmod(env_file, 0o600)
-        click.echo(f"✅ 创建 .env (权限: 600)")
-        created.append('.env')
-    
+        click.echo("✅ 创建 .env (权限: 600)")
+        created.append(".env")
+
     click.echo()
     if created:
         click.echo(f"✅ 初始化完成！创建了 {len(created)} 个项目")
     if skipped:
         click.echo(f"ℹ️  跳过了 {len(skipped)} 个已存在的项目")
-    
+
     click.echo("\n📝 下一步:")
     click.echo("  1. 编辑 .env 文件配置API密钥")
     click.echo("  2. 运行 'ai-as-me check-tools' 检查工具可用性")
@@ -532,26 +537,26 @@ def soul():
 
 
 @soul.command()
-@click.option('--force', is_flag=True, help='强制重新初始化，覆盖已存在的文件')
+@click.option("--force", is_flag=True, help="强制重新初始化，覆盖已存在的文件")
 def init(force):
     """初始化Soul档案文件"""
     import os
-    
+
     soul_dir = Path.cwd() / "soul"
     if not soul_dir.exists():
         click.echo("❌ soul/ 目录不存在，请先运行 'ai-as-me init'")
         return
-    
+
     profile_file = soul_dir / "profile.md"
     rules_file = soul_dir / "rules.md"
-    
+
     created = []
     skipped = []
-    
+
     # 创建profile.md
     if profile_file.exists() and not force:
         click.echo("⏭️  soul/profile.md 已存在，跳过")
-        skipped.append('profile.md')
+        skipped.append("profile.md")
     else:
         profile_template = """# Soul Profile - 个人档案
 
@@ -578,12 +583,12 @@ def init(force):
         profile_file.write_text(profile_template)
         os.chmod(profile_file, 0o600)
         click.echo("✅ 创建 soul/profile.md (权限: 600)")
-        created.append('profile.md')
-    
+        created.append("profile.md")
+
     # 创建rules.md
     if rules_file.exists() and not force:
         click.echo("⏭️  soul/rules.md 已存在，跳过")
-        skipped.append('rules.md')
+        skipped.append("rules.md")
     else:
         rules_template = """# Soul Rules - 工作规则
 
@@ -616,14 +621,14 @@ def init(force):
         rules_file.write_text(rules_template)
         os.chmod(rules_file, 0o600)
         click.echo("✅ 创建 soul/rules.md (权限: 600)")
-        created.append('rules.md')
-    
+        created.append("rules.md")
+
     click.echo()
     if created:
         click.echo(f"✅ Soul初始化完成！创建了 {len(created)} 个文件")
     if skipped:
         click.echo(f"ℹ️  跳过了 {len(skipped)} 个已存在的文件")
-    
+
     click.echo("\n📝 下一步:")
     click.echo("  1. 编辑 soul/profile.md 填写个人信息")
     click.echo("  2. 编辑 soul/rules.md 定义工作规则")
@@ -631,60 +636,60 @@ def init(force):
 
 
 @soul.command()
-@click.option('--output', '-o', default='soul_backup.tar.gz', help='备份文件名')
+@click.option("--output", "-o", default="soul_backup.tar.gz", help="备份文件名")
 def backup(output):
     """备份Soul数据"""
     import tarfile
     import os
-    
+
     soul_dir = Path.cwd() / "soul"
     if not soul_dir.exists():
         click.echo("❌ soul/ 目录不存在")
         return
-    
+
     output_path = Path.cwd() / output
-    
+
     try:
-        with tarfile.open(output_path, 'w:gz') as tar:
-            tar.add(soul_dir, arcname='soul')
-        
+        with tarfile.open(output_path, "w:gz") as tar:
+            tar.add(soul_dir, arcname="soul")
+
         os.chmod(output_path, 0o600)
         click.echo(f"✅ Soul数据已备份到: {output}")
         click.echo(f"   文件大小: {output_path.stat().st_size} bytes")
-        click.echo(f"   权限: 600")
+        click.echo("   权限: 600")
     except Exception as e:
         click.echo(f"❌ 备份失败: {str(e)}")
 
 
 @soul.command()
-@click.argument('backup_file')
-@click.option('--force', is_flag=True, help='强制恢复，覆盖现有文件')
+@click.argument("backup_file")
+@click.option("--force", is_flag=True, help="强制恢复，覆盖现有文件")
 def restore(backup_file, force):
     """从备份恢复Soul数据"""
     import tarfile
     import os
-    
+
     backup_path = Path(backup_file)
     if not backup_path.exists():
         click.echo(f"❌ 备份文件不存在: {backup_file}")
         return
-    
+
     soul_dir = Path.cwd() / "soul"
     if soul_dir.exists() and not force:
         click.echo("⚠️  soul/ 目录已存在")
         click.echo("   使用 --force 选项强制恢复")
         return
-    
+
     try:
-        with tarfile.open(backup_path, 'r:gz') as tar:
-            tar.extractall(Path.cwd())
-        
+        with tarfile.open(backup_path, "r:gz") as tar:
+            tar.extractall(Path.cwd(), filter="data")
+
         # 恢复文件权限
-        for file in soul_dir.glob('*.md'):
+        for file in soul_dir.glob("*.md"):
             os.chmod(file, 0o600)
-        
-        click.echo(f"✅ Soul数据已恢复")
-        click.echo(f"   文件权限已设置为 600")
+
+        click.echo("✅ Soul数据已恢复")
+        click.echo("   文件权限已设置为 600")
     except Exception as e:
         click.echo(f"❌ 恢复失败: {str(e)}")
 
@@ -692,42 +697,40 @@ def restore(backup_file, force):
 @soul.command()
 def check():
     """检查Soul文件权限和安全性"""
-    import os
-    import stat
-    
+
     soul_dir = Path.cwd() / "soul"
     if not soul_dir.exists():
         click.echo("❌ soul/ 目录不存在")
         return
-    
+
     click.echo("🔒 检查Soul安全性...\n")
-    
+
     issues = []
-    
+
     # 检查目录权限
     dir_mode = oct(soul_dir.stat().st_mode)[-3:]
-    if dir_mode != '700':
+    if dir_mode != "700":
         issues.append(f"soul/ 目录权限为 {dir_mode}，建议 700")
     else:
         click.echo(f"✅ soul/ 目录权限: {dir_mode}")
-    
+
     # 检查文件权限
-    for file in soul_dir.glob('*.md'):
+    for file in soul_dir.glob("*.md"):
         file_mode = oct(file.stat().st_mode)[-3:]
-        if file_mode != '600':
+        if file_mode != "600":
             issues.append(f"{file.name} 权限为 {file_mode}，建议 600")
         else:
             click.echo(f"✅ {file.name} 权限: {file_mode}")
-    
+
     # 检查.env文件
     env_file = Path.cwd() / ".env"
     if env_file.exists():
         env_mode = oct(env_file.stat().st_mode)[-3:]
-        if env_mode != '600':
+        if env_mode != "600":
             issues.append(f".env 权限为 {env_mode}，建议 600")
         else:
             click.echo(f"✅ .env 权限: {env_mode}")
-    
+
     click.echo()
     if issues:
         click.echo("⚠️  发现安全问题:")
@@ -741,41 +744,43 @@ def check():
 def reflect():
     """分析执行历史并生成反思报告"""
     from ai_as_me.yangu import ExecutionHistory
-    
+
     history = ExecutionHistory()
     all_records = history.get_history()
-    
+
     if not all_records:
         click.echo("📊 暂无执行历史")
         return
-    
+
     click.echo("🤔 分析执行历史...\n")
-    
+
     # 分析高分和低分任务
     high_rated = history.get_rated_tasks(min_rating=4)
     low_rated = history.get_rated_tasks(max_rating=2)
-    
-    click.echo(f"📈 执行统计:")
+
+    click.echo("📈 执行统计:")
     click.echo(f"   总任务数: {len(all_records)}")
     click.echo(f"   高分任务 (4-5分): {len(high_rated)}")
     click.echo(f"   低分任务 (1-2分): {len(low_rated)}")
-    
+
     if high_rated:
-        click.echo(f"\n✅ 成功模式:")
+        click.echo("\n✅ 成功模式:")
         tools = {}
         for r in high_rated:
-            tool = r.get('tool', 'unknown')
+            tool = r.get("tool", "unknown")
             tools[tool] = tools.get(tool, 0) + 1
         for tool, count in tools.items():
             click.echo(f"   - {tool}: {count}次成功")
-    
+
     if low_rated:
-        click.echo(f"\n❌ 需要改进:")
+        click.echo("\n❌ 需要改进:")
         for r in low_rated[:3]:
             click.echo(f"   - 任务 {r['task_id']}: {r.get('feedback', '无反馈')}")
-    
+
     # 生成简单报告
-    report_file = Path.cwd() / "logs" / f"reflection_{datetime.now().strftime('%Y%m%d')}.md"
+    report_file = (
+        Path.cwd() / "logs" / f"reflection_{datetime.now().strftime('%Y%m%d')}.md"
+    )
     report_content = f"""# 反思报告
 
 **生成时间**: {datetime.now().isoformat()}
@@ -800,45 +805,45 @@ def reflect():
 def stats():
     """显示学习效果统计"""
     from ai_as_me.yangu import ExecutionHistory
-    
+
     history = ExecutionHistory()
     all_records = history.get_history()
-    
+
     if not all_records:
         click.echo("📊 暂无统计数据")
         return
-    
+
     click.echo("📊 学习效果统计\n")
-    
+
     # 计算评分趋势
-    rated = [r for r in all_records if r.get('rating')]
+    rated = [r for r in all_records if r.get("rating")]
     if rated:
-        avg_rating = sum(r['rating'] for r in rated) / len(rated)
+        avg_rating = sum(r["rating"] for r in rated) / len(rated)
         click.echo(f"平均评分: {avg_rating:.1f}/5.0")
-        
+
         # 简单趋势
         if len(rated) >= 2:
-            first_half = rated[:len(rated)//2]
-            second_half = rated[len(rated)//2:]
-            avg_first = sum(r['rating'] for r in first_half) / len(first_half)
-            avg_second = sum(r['rating'] for r in second_half) / len(second_half)
+            first_half = rated[: len(rated) // 2]
+            second_half = rated[len(rated) // 2 :]
+            avg_first = sum(r["rating"] for r in first_half) / len(first_half)
+            avg_second = sum(r["rating"] for r in second_half) / len(second_half)
             improvement = ((avg_second - avg_first) / avg_first) * 100
-            
+
             if improvement > 0:
                 click.echo(f"满意度提升: +{improvement:.1f}%")
             else:
                 click.echo(f"满意度变化: {improvement:.1f}%")
-    
+
     # 工具使用统计
     tools = {}
     for r in all_records:
-        tool = r.get('tool', 'unknown')
+        tool = r.get("tool", "unknown")
         tools[tool] = tools.get(tool, 0) + 1
-    
-    click.echo(f"\n工具使用:")
+
+    click.echo("\n工具使用:")
     for tool, count in tools.items():
         click.echo(f"   {tool}: {count}次")
-    
+
     click.echo(f"\n✅ 系统已执行 {len(all_records)} 个任务")
 
 
@@ -849,93 +854,102 @@ def task():
 
 
 @task.command()
-@click.argument('description')
+@click.argument("description")
 def add(description):
     """添加新任务"""
     from ai_as_me.kanban import TaskManager
-    
+
     tm = TaskManager()
     task = tm.add_task(description)
-    
-    click.echo(f"✅ 任务已创建")
+
+    click.echo("✅ 任务已创建")
     click.echo(f"   ID: {task['id']}")
     click.echo(f"   描述: {task['description']}")
     click.echo(f"   状态: {task['status']}")
 
 
 @task.command()
-@click.option('--status', help='按状态过滤 (todo/doing/done)')
+@click.option("--status", help="按状态过滤 (todo/doing/done)")
 def list(status):
     """列出所有任务"""
     from ai_as_me.kanban import TaskManager
-    
+
     tm = TaskManager()
     tasks = tm.list_tasks(status)
-    
+
     if not tasks:
         click.echo("📋 暂无任务")
         return
-    
+
     click.echo(f"📋 任务列表 ({len(tasks)} 个任务)\n")
     for t in tasks:
-        status_icon = {"todo": "⏳", "doing": "🔄", "done": "✅", "failed": "❌"}.get(t["status"], "❓")
+        status_icon = {"todo": "⏳", "doing": "🔄", "done": "✅", "failed": "❌"}.get(
+            t["status"], "❓"
+        )
         click.echo(f"{status_icon} [{t['id']}] {t['description']}")
         click.echo(f"   状态: {t['status']} | 创建: {t['created_at'][:19]}")
         click.echo()
 
 
 @task.command()
-@click.argument('task_id')
-@click.option('--tool', default='claude-code', help='使用的工具 (claude-code/opencode)')
-@click.option('--fallback/--no-fallback', default=True, help='失败时自动切换备用工具')
-@click.option('--no-soul', is_flag=True, help='不使用Soul注入')
+@click.argument("task_id")
+@click.option(
+    "--tool",
+    default="opencode",
+    help="使用的工具 (opencode) - claude-code temporarily disabled",
+)
+@click.option("--fallback/--no-fallback", default=True, help="失败时自动切换备用工具")
+@click.option("--no-soul", is_flag=True, help="不使用Soul注入")
 def start(task_id, tool, fallback, no_soul):
     """开始执行任务"""
     from ai_as_me.kanban import TaskManager
     from ai_as_me.orchestrator import AgentCLI
     from pathlib import Path
-    
+
     tm = TaskManager()
     task = tm.get_task(task_id)
-    
+
     if not task:
         click.echo(f"❌ 任务不存在: {task_id}")
         return
-    
-    if task['status'] != 'todo':
+
+    if task["status"] != "todo":
         click.echo(f"⚠️  任务状态为 {task['status']}，只能执行 todo 状态的任务")
         return
-    
+
     # 更新状态为doing
-    tm.update_task_status(task_id, 'doing')
+    tm.update_task_status(task_id, "doing")
     click.echo(f"🔄 开始执行任务 [{task_id}]")
     click.echo(f"   描述: {task['description']}")
     click.echo(f"   工具: {tool}")
     if fallback:
-        click.echo(f"   备用: 启用自动切换")
+        click.echo("   备用: 启用自动切换")
     if not no_soul:
-        click.echo(f"   Soul: 启用个性化注入")
+        click.echo("   Soul: 启用个性化注入")
     click.echo()
-    
+
     # 调用Agent CLI
     agent = AgentCLI()
     click.echo("⏳ 调用 Agent CLI...")
-    
+
     use_soul = not no_soul
-    
+
     if fallback:
         # 使用备用机制
-        tools = [tool, 'opencode' if tool == 'claude-code' else 'claude-code']
-        result = agent.call_with_fallback(task['description'], tools, timeout=10, use_soul=use_soul)
-        
-        if 'attempts' in result and len(result['attempts']) > 1:
+        # tools = [tool, "opencode" if tool == "claude-code" else "claude-code"]  # claude-code temporarily disabled
+        tools = ["opencode"]  # Only use opencode for now
+        result = agent.call_with_fallback(
+            task["description"], tools, timeout=10, use_soul=use_soul
+        )
+
+        if "attempts" in result and len(result["attempts"]) > 1:
             click.echo(f"\n🔄 已尝试 {len(result['attempts'])} 个工具:")
-            for attempt in result['attempts']:
-                status = "✅" if attempt['success'] else "❌"
+            for attempt in result["attempts"]:
+                status = "✅" if attempt["success"] else "❌"
                 click.echo(f"   {status} {attempt['tool']}")
     else:
-        result = agent.call(tool, task['description'], timeout=10, use_soul=use_soul)
-    
+        result = agent.call(tool, task["description"], timeout=10, use_soul=use_soul)
+
     # 保存结果
     from ai_as_me.utils.result_formatter import format_result_metadata
 
@@ -944,8 +958,8 @@ def start(task_id, tool, fallback, no_soul):
     result_file = results_dir / f"{task_id}.md"
 
     # 补充结果中缺失的信息
-    result['tool'] = result.get('tool', tool)
-    result['timestamp'] = time.time()
+    result["tool"] = result.get("tool", tool)
+    result["timestamp"] = time.time()
 
     metadata_section = format_result_metadata(result)
 
@@ -968,7 +982,7 @@ def start(task_id, tool, fallback, no_soul):
 ```
 """
 
-    if result.get('error'):
+    if result.get("error"):
         result_content += f"""
 ## 错误信息
 
@@ -978,45 +992,50 @@ def start(task_id, tool, fallback, no_soul):
 """
 
     result_file.write_text(result_content)
-    
+
     # 更新最终状态
-    final_status = 'done' if result['success'] else 'failed'
+    final_status = "done" if result["success"] else "failed"
     tm.update_task_status(task_id, final_status)
-    
-    if result['success']:
-        click.echo(f"\n✅ 任务完成！")
+
+    if result["success"]:
+        click.echo("\n✅ 任务完成！")
     else:
         click.echo(f"\n❌ 任务失败: {result['error'][:100]}")
-        click.echo(f"\n💡 建议:")
-        click.echo(f"   1. 检查网络连接")
-        click.echo(f"   2. 运行 'ai-as-me check-tools' 验证工具")
-        click.echo(f"   3. 查看日志: logs/agent_calls.log")
-    
+        click.echo("\n💡 建议:")
+        click.echo("   1. 检查网络连接")
+        click.echo("   2. 运行 'ai-as-me check-tools' 验证工具")
+        click.echo("   3. 查看日志: logs/agent_calls.log")
+
     click.echo(f"\n📄 结果已保存: kanban/results/{task_id}.md")
-    
+
     # 收集用户反馈
     click.echo("\n📊 请对任务执行结果评分:")
-    rating = click.prompt("   评分 (1-5分，回车跳过)", type=int, default=0, show_default=False)
-    
+    rating = click.prompt(
+        "   评分 (1-5分，回车跳过)", type=int, default=0, show_default=False
+    )
+
     feedback = None
     if rating > 0:
-        feedback = click.prompt("   反馈 (可选，回车跳过)", default="", show_default=False)
+        feedback = click.prompt(
+            "   反馈 (可选，回车跳过)", default="", show_default=False
+        )
         if not feedback:
             feedback = None
-        
+
         # 保存到执行历史
         from ai_as_me.yangu import ExecutionHistory
+
         history = ExecutionHistory()
         history.add_execution(
             task_id=task_id,
-            tool=result.get('tool', tool),
-            prompt=task['description'],
-            output=result.get('output', ''),
-            success=result['success'],
+            tool=result.get("tool", tool),
+            prompt=task["description"],
+            output=result.get("output", ""),
+            success=result["success"],
             rating=rating,
-            feedback=feedback
+            feedback=feedback,
         )
-        click.echo(f"\n✅ 反馈已记录，感谢！")
+        click.echo("\n✅ 反馈已记录，感谢！")
 
 
 if __name__ == "__main__":
@@ -1034,20 +1053,21 @@ def soul():
 def status():
     """检查 Soul 状态"""
     from ai_as_me.soul.loader import SoulLoader
+
     loader = SoulLoader(Path("soul"))
     status = loader.check_status()
-    
+
     click.echo("📊 Soul Status:")
     click.echo(f"  Profile: {'✓' if status['profile'] else '✗'}")
     click.echo(f"  Rules: {'✓' if status['rules'] else '✗'}")
     click.echo(f"  Mission: {'✓' if status['mission'] else '✗'}")
-    
+
     # v3.0: 检查规则目录
     rules_dir = Path("soul/rules")
     if rules_dir.exists():
         core_count = len(list((rules_dir / "core").glob("*.md")))
         learned_count = len(list((rules_dir / "learned").glob("*.md")))
-        click.echo(f"\n📚 Rules Structure (v3.0):")
+        click.echo("\n📚 Rules Structure (v3.0):")
         click.echo(f"  Core rules: {core_count}")
         click.echo(f"  Learned rules: {learned_count}")
 
@@ -1056,54 +1076,54 @@ def status():
 def migrate():
     """迁移 Soul 到 v3.0 结构"""
     from ai_as_me.soul.migrator import SoulMigrator
+
     migrator = SoulMigrator(Path("soul"))
     migrator.migrate()
     click.echo("✓ Migration complete")
-
 
 
 @cli.command()
 def check_tools():
     """检查Agent CLI工具可用性"""
     click.echo("🔧 检查 Agent CLI 工具可用性...\n")
-    
+
     tools = [
+        # {
+        #     "name": "Claude Code",
+        #     "command": ["npx", "@anthropic-ai/claude-code@2.0.76", "--version"],
+        #     "package": "@anthropic-ai/claude-code@2.0.76",
+        # },
         {
-            'name': 'Claude Code',
-            'command': ['npx', '@anthropic-ai/claude-code@2.0.76', '--version'],
-            'package': '@anthropic-ai/claude-code@2.0.76'
+            "name": "OpenCode",
+            "command": ["npx", "opencode-ai@1.1.3", "--version"],
+            "package": "opencode-ai@1.1.3",
         },
-        {
-            'name': 'OpenCode',
-            'command': ['npx', 'opencode-ai@1.1.3', '--version'],
-            'package': 'opencode-ai@1.1.3'
-        }
     ]
-    
-    all_passed = True
-    
+
     for tool in tools:
         click.echo(f"检测 {tool['name']}...")
         try:
             result = subprocess.run(
-                tool['command'],
-                capture_output=True,
-                text=True,
-                timeout=30
+                tool["command"], capture_output=True, text=True, timeout=30
             )
-            if result.returncode == 0 or 'version' in result.stdout.lower() or 'version' in result.stderr.lower():
+            if (
+                result.returncode == 0
+                or "version" in result.stdout.lower()
+                or "version" in result.stderr.lower()
+            ):
                 click.echo(f"✅ {tool['name']}: 可用")
             else:
-                click.echo(f"⚠️  {tool['name']}: 可能不可用 (返回码: {result.returncode})")
+                click.echo(
+                    f"⚠️  {tool['name']}: 可能不可用 (返回码: {result.returncode})"
+                )
                 click.echo(f"   建议: npx -y {tool['package']}")
         except subprocess.TimeoutExpired:
             click.echo(f"⏱️  {tool['name']}: 检测超时 (>30秒)")
-            click.echo(f"   建议: 工具可能需要首次下载，请稍后重试")
+            click.echo("   建议: 工具可能需要首次下载，请稍后重试")
         except FileNotFoundError:
             click.echo(f"❌ {tool['name']}: npx 不可用")
-            click.echo(f"   建议: 先运行 'ai-as-me check-env'")
-            all_passed = False
-    
+            click.echo("   建议: 先运行 'ai-as-me check-env'")
+
     click.echo()
     click.echo("✅ Agent CLI 工具检查完成")
     click.echo("\n💡 提示: 首次使用时工具会自动下载")
@@ -1116,13 +1136,14 @@ def evolve():
 
 
 @evolve.command()
-@click.option('--days', default=7, help='统计天数')
+@click.option("--days", default=7, help="统计天数")
 def stats(days):
     """显示进化统计"""
     from ai_as_me.evolution.logger import EvolutionLogger
+
     logger = EvolutionLogger(Path("logs/evolution.jsonl"))
     stats_data = logger.get_stats(days)
-    
+
     click.echo(f"📊 进化统计（最近 {days} 天）")
     click.echo(f"  规则生成: {stats_data['total_rules']} 条")
     click.echo(f"  模式识别: {stats_data['total_patterns']} 个")
@@ -1130,27 +1151,28 @@ def stats(days):
 
 
 @evolve.command()
-@click.option('--limit', default=10, help='显示数量')
+@click.option("--limit", default=10, help="显示数量")
 def history(limit):
     """显示进化历史"""
     from ai_as_me.evolution.logger import EvolutionLogger
+
     logger = EvolutionLogger(Path("logs/evolution.jsonl"))
     events = logger.get_recent_events(limit)
-    
+
     if not events:
         click.echo("暂无进化记录")
         return
-    
+
     click.echo(f"📜 最近 {len(events)} 次进化事件:\n")
     for i, event in enumerate(events, 1):
-        timestamp = event['timestamp'][:19]
-        task_id = event['task_id']
-        rules = event.get('rules_generated', 0)
-        patterns = event.get('patterns_found', 0)
-        
+        timestamp = event["timestamp"][:19]
+        task_id = event["task_id"]
+        rules = event.get("rules_generated", 0)
+        patterns = event.get("patterns_found", 0)
+
         click.echo(f"{i}. [{timestamp}] {task_id}")
         click.echo(f"   模式: {patterns}, 规则: {rules}")
-        if event.get('rule_categories'):
+        if event.get("rule_categories"):
             click.echo(f"   类别: {', '.join(event['rule_categories'])}")
         click.echo()
 
@@ -1163,30 +1185,34 @@ def agent():
 
 
 @agent.command()
-@click.argument('task_id')
-@click.option('--agent', default=None, help='指定 agent (claude-code/opencode)')
-@click.option('--no-evolution', is_flag=True, help='不触发进化')
+@click.argument("task_id")
+@click.option(
+    "--agent",
+    default=None,
+    help="指定 agent (opencode) - claude-code temporarily disabled",
+)
+@click.option("--no-evolution", is_flag=True, help="不触发进化")
 def execute(task_id, agent, no_evolution):
     """执行指定任务"""
     from ai_as_me.agents import AgentExecutor
     from ai_as_me.kanban.vibe_manager import VibeManager
-    
+
     # 加载任务
     vibe = VibeManager()
     board = vibe.get_board()
     task = None
-    for col in ['inbox', 'todo', 'doing', 'done']:
+    for col in ["inbox", "todo", "doing", "done"]:
         for t in board[col]:
             if t.id == task_id:
                 task = t
                 break
         if task:
             break
-    
+
     if not task:
         click.echo(f"❌ 任务不存在: {task_id}")
         sys.exit(1)
-    
+
     # 执行任务
     executor = AgentExecutor()
     click.echo(f"🤖 执行任务: {task.title}")
@@ -1194,9 +1220,9 @@ def execute(task_id, agent, no_evolution):
         click.echo(f"   使用 agent: {agent}")
         result = executor.execute_task(task, agent)
     else:
-        click.echo(f"   自动选择可用 agent")
+        click.echo("   自动选择可用 agent")
         result = executor.execute_with_fallback(task)
-    
+
     # 显示结果
     if result.success:
         click.echo(f"✅ 执行成功 ({result.duration:.1f}s)")
@@ -1206,21 +1232,21 @@ def execute(task_id, agent, no_evolution):
     else:
         click.echo(f"❌ 执行失败: {result.error}")
         sys.exit(1)
-    
+
     # 触发进化
     if not no_evolution:
         click.echo("\n🧬 触发进化...")
         from ai_as_me.evolution.engine import EvolutionEngine
         from ai_as_me.llm.client import LLMClient
-        
+
         config = {
-            'experience_dir': 'experiences',
-            'soul_dir': 'soul',
-            'llm_client': LLMClient()
+            "experience_dir": "experiences",
+            "soul_dir": "soul",
+            "llm_client": LLMClient(),
         }
         engine = EvolutionEngine(config)
         evo_result = engine.evolve(task, result.output, result.success, result.duration)
-        
+
         click.echo(f"   模式: {len(evo_result['patterns'])}")
         click.echo(f"   规则: {len(evo_result['rules'])}")
 
@@ -1229,11 +1255,11 @@ def execute(task_id, agent, no_evolution):
 def list():
     """列出所有可用的 agents"""
     from ai_as_me.agents import AgentRegistry
-    
+
     registry = AgentRegistry()
     available = registry.get_available()
     all_agents = registry.list_all()
-    
+
     click.echo("🤖 已注册的 Agents:\n")
     for name in all_agents:
         agent = registry.get(name)
@@ -1241,5 +1267,5 @@ def list():
         capabilities = ", ".join(agent.get_capabilities())
         click.echo(f"  {name}: {status}")
         click.echo(f"    能力: {capabilities}")
-    
+
     click.echo(f"\n可用: {len(available)}/{len(all_agents)}")
