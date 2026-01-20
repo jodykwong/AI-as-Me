@@ -138,7 +138,7 @@ function kanbanApp() {
                         const newDoing = data.doing || [];
                         console.log('🔍 [refreshDoingTasks] API returned doing:', newDoing.length);
                         
-                        // 🔧 FIX: 保留正在执行的任务至少3秒，避免闪现
+                        // 🔧 FIX: 使用进入时间而非更新时间（方案A）
                         const now = Date.now();
                         const beforeFilter = this.board.doing.length;
                         this.board.doing = this.board.doing.filter(task => {
@@ -147,9 +147,15 @@ function kanbanApp() {
                                 console.log('🔍 [refreshDoingTasks] Skipping optimistic:', task.id);
                                 return true;
                             }
-                            const taskAge = now - new Date(task.updated_at).getTime();
+                            
+                            // 使用进入时间而非更新时间
+                            const enterTime = task._enterTime || new Date(task.updated_at).getTime();
+                            const taskAge = now - enterTime;
                             const keep = taskAge < 3000 || newDoing.some(t => t.id === task.id);
-                            console.log('🔍 [refreshDoingTasks] Task', task.id, 'age:', taskAge, 'keep:', keep);
+                            
+                            console.log('🔍 [refreshDoingTasks] Task', task.id, 
+                                'enterTime:', new Date(enterTime).toISOString(),
+                                'age:', taskAge, 'ms, keep:', keep);
                             return keep;
                         });
                         console.log('🔍 [refreshDoingTasks] After filter:', beforeFilter, '->', this.board.doing.length);
@@ -158,6 +164,8 @@ function kanbanApp() {
                         newDoing.forEach(newTask => {
                             if (!this.board.doing.some(t => t.id === newTask.id)) {
                                 console.log('🔍 [refreshDoingTasks] Adding new task:', newTask.id);
+                                // 新任务也标记进入时间
+                                newTask._enterTime = now;
                                 this.board.doing.push(newTask);
                             }
                         });
@@ -336,9 +344,13 @@ function kanbanApp() {
             this.loading = true;
             this.error = '';
             
-            // 🔧 FIX: 标记为乐观更新，防止刷新覆盖
-            this._optimisticUpdates.set(taskId, { status: toStatus, timestamp: Date.now() });
-            console.log('🔍 [moveTask] Optimistic update set:', this._optimisticUpdates.size);
+            // 🔧 FIX: 记录进入时间（方案A）
+            const enterTime = Date.now();
+            this._optimisticUpdates.set(taskId, { 
+                status: toStatus, 
+                enterTime: enterTime
+            });
+            console.log('🔍 [moveTask] Optimistic update set:', this._optimisticUpdates.size, 'enterTime:', enterTime);
             
             try {
                 const res = await fetch(`/api/kanban/tasks/${taskId}/move`, {
@@ -364,6 +376,14 @@ function kanbanApp() {
                 
                 // 立即更新本地状态，避免重新加载整个看板
                 this.updateLocalTaskStatus(taskId, toStatus);
+                
+                // 🔧 FIX: 标记任务进入时间
+                const task = this.board[toStatus]?.find(t => t.id === taskId);
+                if (task) {
+                    task._enterTime = enterTime;
+                    console.log('🔍 [moveTask] Task enter time marked:', taskId, enterTime);
+                }
+                
                 console.log('🔍 [moveTask] Local status updated, doing count:', this.board.doing.length);
                 
                 // 🔧 FIX: 3秒后移除乐观更新标记
