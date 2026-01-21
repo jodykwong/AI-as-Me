@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  ai-as-me:
+    build: .
+    image: ai-as-me:3.5.0
+    container_name: ai-as-me
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./soul:/app/soul
+      - ./kanban:/app/kanban
+      - ./logs:/app/logs
+      - ./experience:/app/experience
+      - ./inspiration_pool:/app/inspiration_pool
+      - ./.env:/app/.env:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  postgres:
+    image: postgres:14-alpine
+    container_name: ai-as-me-db
+    environment:
+      - POSTGRES_DB=ai_as_me
+      - POSTGRES_USER=ai_as_me
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-changeme}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    profiles:
+      - with-db
+
+volumes:
+  postgres_data:
