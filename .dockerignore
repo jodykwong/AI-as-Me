@@ -49,9 +49,7 @@ experience/
 inspiration_pool/
 .env
 *.db
-data/postgres/
-data/tasks/
-data/kanban/
+data/
 
 # Temporary
 *.tmp
