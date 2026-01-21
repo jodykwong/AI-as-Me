@@ -2,7 +2,6 @@
 
 from typing import Dict, List, Optional
 from .base import BaseAgent
-from .claude_agent import ClaudeAgent
 from .opencode_agent import OpenCodeAgent
 
 
@@ -14,8 +13,7 @@ class AgentRegistry:
         self._register_default_agents()
 
     def _register_default_agents(self):
-        """注册默认 agents"""
-        self.register(ClaudeAgent())
+        """注册默认 agents - Claude Code removed to prevent token consumption"""
         self.register(OpenCodeAgent())
 
     def register(self, agent: BaseAgent):
