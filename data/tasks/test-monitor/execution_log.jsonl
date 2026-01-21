@@ -1,0 +1,4 @@
+{"timestamp":"2026-01-20T10:35:00","type":"step","content":"开始执行测试监控任务"}
+{"timestamp":"2026-01-20T10:35:05","type":"command","content":"正在分析任务需求..."}
+{"timestamp":"2026-01-20T10:35:10","type":"output","content":"任务分析完成，开始执行"}
+{"timestamp":"2026-01-20T10:35:15","type":"step","content":"执行中..."}

@@ -8,7 +8,6 @@ modules:
   - bmm
   - cis
 ides:
-  - claude-code
   - codex
   - cursor
   - github-copilot

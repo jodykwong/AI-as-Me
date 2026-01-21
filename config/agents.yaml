@@ -2,8 +2,6 @@
 # Story 5.2: 工具能力注册
 
 agents:
-  claude_code:
-    command: ["npx", "-y", "@anthropic-ai/claude-code@2.0.76"]
     capabilities:
       code_generation: 0.9
       code_review: 0.9
